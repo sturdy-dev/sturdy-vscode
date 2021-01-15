@@ -15,37 +15,48 @@ export function activate(context: vscode.ExtensionContext) {
   // This line of code will only be executed once when your extension is activated
   console.log('Congratulations, your extension "sturdy" is now active!');
 
+  work();
   // The command has been defined in the package.json file
   // Now provide the implementation of the command with registerCommand
   // The commandId parameter must match the command field in package.json
   let disposable = vscode.commands.registerCommand("sturdy.helloWorld", () => {
     // The code you place here will be executed every time your command is executed
 
-    work();
     // Display a message box to the user
     vscode.window.showInformationMessage("Hello Sturdy again!");
   });
+  let onStart = vscode.commands.registerCommand("onStartupFinished", () =>
+    work()
+  );
 
-  context.subscriptions.push(disposable);
+  context.subscriptions.push(disposable, onStart);
 }
 
 async function work() {
+  let git = init();
   let remote = "~/tmp/mockremote";
   let userID = "foobarsson";
+  var head = "";
   for (;;) {
-    foo(remote, userID);
-    console.log("here");
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    let currHead = await git.revparse("HEAD");
+    if (head !== currHead) {
+      push(git, remote, userID);
+      head = currHead;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 3000));
   }
 }
 
-function foo(remote: string, userID: string) {
+function init(): SimpleGit {
   const options: SimpleGitOptions = {
     baseDir: process.cwd(),
     binary: "git",
     maxConcurrentProcesses: 6,
   };
-  const git: SimpleGit = simpleGit(options);
+  return simpleGit(options);
+}
+
+function push(git: SimpleGit, remote: string, userID: string) {
   git.addRemote("check-conflicts", remote);
   git.branch().then((br: any) => {
     let currentBranch = br.current;

@@ -10,6 +10,7 @@
     "Other"
   ],
   "activationEvents": [
+    "onStartupFinished",
     "onCommand:sturdy.helloWorld"
   ],
   "main": "./out/extension.js",
