@@ -15,6 +15,28 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "configuration": [
+      {
+        "title": "Sturdy",
+        "properties": {
+          "conf.sturdy.userId": {
+            "type": "string",
+            "description": "Sturdy user ID",
+            "scope": "application"
+          },
+          "conf.sturdy.api": {
+            "type": "string",
+            "description": "Sturdy Backend API address",
+            "scope": "application"
+          },
+          "conf.sturdy.remote": {
+            "type": "string",
+            "description": "Sturdy Remote",
+            "scope": "window"
+          }
+        }
+      }
+    ],
     "commands": [
       {
         "command": "sturdy.helloWorld",

@@ -33,14 +33,13 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 async function work() {
+  const conf: any = vscode.workspace.getConfiguration().get("conf.sturdy");
   let git = init();
-  let remote = "~/tmp/mockremote";
-  let userID = "foobarsson";
   var head = "";
   for (;;) {
     let currHead = await git.revparse("HEAD");
     if (head !== currHead) {
-      push(git, remote, userID);
+      push(git, conf.remote, conf.userId);
       head = currHead;
     }
     await new Promise((resolve) => setTimeout(resolve, 3000));
