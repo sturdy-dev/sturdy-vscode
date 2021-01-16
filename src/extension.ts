@@ -56,10 +56,9 @@ function init(): SimpleGit {
 }
 
 function push(git: SimpleGit, remote: string, userID: string) {
-  git.addRemote("check-conflicts", remote);
   git.branch().then((br: any) => {
     let currentBranch = br.current;
-    git.push("check-conflicts", currentBranch + ":" + userID, ["--force"]);
+    git.push(["--force", remote, currentBranch + ":" + userID]);
   });
 }
 
