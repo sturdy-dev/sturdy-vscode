@@ -44,8 +44,8 @@
     ],
     "commands": [
       {
-        "command": "sturdy.helloWorld",
-        "title": "Hello World"
+        "command": "sturdy.setup",
+        "title": "Sturdy Setup"
       }
     ]
   },

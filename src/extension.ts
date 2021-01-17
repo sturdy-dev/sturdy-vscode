@@ -4,7 +4,7 @@ import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 
 export function activate(context: vscode.ExtensionContext) {
   work();
-  let disposable = vscode.commands.registerCommand("sturdy.helloWorld", () => {
+  let disposable = vscode.commands.registerCommand("sturdy.setup", () => {
     vscode.window.showInformationMessage("Hello Sturdy again!");
   });
   let onStart = vscode.commands.registerCommand("onStartupFinished", () =>
