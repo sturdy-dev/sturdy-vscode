@@ -29,6 +29,11 @@
             "description": "Sturdy Backend API address",
             "scope": "application"
           },
+          "conf.sturdy.token": {
+            "type": "string",
+            "description": "Sturdy token",
+            "scope": "application"
+          },
           "conf.sturdy.remote": {
             "type": "string",
             "description": "Sturdy Remote",
@@ -66,6 +71,7 @@
     "vscode-test": "^1.4.1"
   },
   "dependencies": {
+    "axios": "^0.21.1",
     "simple-git": "^2.31.0"
   }
 }

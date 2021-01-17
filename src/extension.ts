@@ -7,6 +7,7 @@ import simpleGit, {
   TaskOptions,
 } from "simple-git";
 import { format } from "path";
+import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -40,11 +41,66 @@ async function work() {
     let currHead = await git.revparse("HEAD");
     if (head !== currHead) {
       push(git, conf.remote, conf.userId);
+      notifyPush(conf);
       head = currHead;
     }
+    pollConflicts(conf);
+
     await new Promise((resolve) => setTimeout(resolve, 3000));
   }
 }
+
+function notifyPush(conf: any) {
+  return axios.post(
+    conf.api + "/v3/plugins/notifypush",
+    {
+      repo_id: "magic",
+      branch_name: "magic",
+    },
+    {
+      headers: {
+        Cookie: "auth=" + conf.token,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+}
+function pollConflicts(conf: any) {
+  axios
+    .post(
+      conf.api + "/v3/plugins/conflicts",
+      {
+        repo_id: "magic",
+        branch_name: "magic",
+      },
+      {
+        headers: {
+          Cookie: "auth=" + conf.token,
+          "Content-Type": "application/json",
+        },
+      }
+    )
+    .then(handleResponse)
+    .catch(handleError);
+}
+
+const handleResponse = (response: AxiosResponse) => {
+  console.log(response.data);
+  console.log(response.status);
+  console.log(response.statusText);
+  console.log(response.headers);
+  console.log(response.config);
+};
+
+const handleError = (error: AxiosError) => {
+  if (error.response) {
+    console.log(error.response.data);
+    console.log(error.response.status);
+    console.log(error.response.headers);
+  } else {
+    console.log(error.message);
+  }
+};
 
 function init(): SimpleGit {
   const options: SimpleGitOptions = {
