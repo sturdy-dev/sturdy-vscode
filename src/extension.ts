@@ -1,29 +1,10 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
-import simpleGit, {
-  SimpleGit,
-  SimpleGitOptions,
-  TaskOptions,
-} from "simple-git";
-import { format } from "path";
+import simpleGit, { SimpleGit, SimpleGitOptions } from "simple-git";
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 
-// this method is called when your extension is activated
-// your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-  // Use the console to output diagnostic information (console.log) and errors (console.error)
-  // This line of code will only be executed once when your extension is activated
-  console.log('Congratulations, your extension "sturdy" is now active!');
-
   work();
-  // The command has been defined in the package.json file
-  // Now provide the implementation of the command with registerCommand
-  // The commandId parameter must match the command field in package.json
   let disposable = vscode.commands.registerCommand("sturdy.helloWorld", () => {
-    // The code you place here will be executed every time your command is executed
-
-    // Display a message box to the user
     vscode.window.showInformationMessage("Hello Sturdy again!");
   });
   let onStart = vscode.commands.registerCommand("onStartupFinished", () =>
@@ -37,6 +18,7 @@ async function work() {
   const conf: any = vscode.workspace.getConfiguration().get("conf.sturdy");
   let git = init();
   var head = "";
+  var knownConflicts = [];
   for (;;) {
     let currHead = await git.revparse("HEAD");
     if (head !== currHead) {
@@ -44,14 +26,20 @@ async function work() {
       notifyPush(conf);
       head = currHead;
     }
-    checkConflicts(conf);
+
+    let rsp = await fetchConflicts(conf);
+    if (rsp.data.conflicts.length > knownConflicts.length) {
+      knownConflicts = rsp.data.conflicts;
+      vscode.window.showInformationMessage(
+        "You have conflicts: " +
+          knownConflicts
+            .map((c: any) => c.commit + " conflicts with " + c.counterpart)
+            .join(" and\n")
+      );
+    }
 
     await new Promise((resolve) => setTimeout(resolve, 3000));
   }
-}
-
-function checkConflicts(conf: any) {
-  fetchConflicts(conf).then(handleResponse).catch(handleError);
 }
 
 function fetchConflicts(conf: any) {
