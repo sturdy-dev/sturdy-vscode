@@ -44,18 +44,22 @@ async function work() {
       notifyPush(conf);
       head = currHead;
     }
-    pollConflicts(conf);
+    checkConflicts(conf);
 
     await new Promise((resolve) => setTimeout(resolve, 3000));
   }
 }
 
-function notifyPush(conf: any) {
+function checkConflicts(conf: any) {
+  fetchConflicts(conf).then(handleResponse).catch(handleError);
+}
+
+function fetchConflicts(conf: any) {
   return axios.post(
-    conf.api + "/v3/plugins/notifypush",
+    conf.api + "/v3/plugins/conflicts",
     {
       repo_id: "magic",
-      branch_name: "magic",
+      branch_name: conf.userId,
     },
     {
       headers: {
@@ -65,38 +69,31 @@ function notifyPush(conf: any) {
     }
   );
 }
-function pollConflicts(conf: any) {
-  axios
-    .post(
-      conf.api + "/v3/plugins/conflicts",
-      {
-        repo_id: "magic",
-        branch_name: "magic",
+
+function notifyPush(conf: any) {
+  return axios.post(
+    conf.api + "/v3/plugins/notifypush",
+    {
+      repo_id: "magic",
+      branch_name: conf.userId,
+    },
+    {
+      headers: {
+        Cookie: "auth=" + conf.token,
+        "Content-Type": "application/json",
       },
-      {
-        headers: {
-          Cookie: "auth=" + conf.token,
-          "Content-Type": "application/json",
-        },
-      }
-    )
-    .then(handleResponse)
-    .catch(handleError);
+    }
+  );
 }
 
 const handleResponse = (response: AxiosResponse) => {
   console.log(response.data);
-  console.log(response.status);
-  console.log(response.statusText);
-  console.log(response.headers);
-  console.log(response.config);
 };
 
 const handleError = (error: AxiosError) => {
   if (error.response) {
     console.log(error.response.data);
     console.log(error.response.status);
-    console.log(error.response.headers);
   } else {
     console.log(error.message);
   }
