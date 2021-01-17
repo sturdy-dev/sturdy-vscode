@@ -2,6 +2,7 @@
   "name": "sturdy",
   "displayName": "Sturdy",
   "description": "Tells you about merge conflicts before they happen",
+  "publisher": "sturdy",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.52.0"
