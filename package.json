@@ -27,6 +27,7 @@
           "conf.sturdy.api": {
             "type": "string",
             "description": "Sturdy Backend API address",
+            "default": "https://api.getsturdy.com",
             "scope": "application"
           },
           "conf.sturdy.token": {
@@ -37,6 +38,7 @@
           "conf.sturdy.remote": {
             "type": "string",
             "description": "Sturdy Remote",
+            "default": "git.getsturdy.com",
             "scope": "window"
           }
         }
@@ -46,6 +48,10 @@
       {
         "command": "sturdy.setup",
         "title": "Sturdy Setup"
+      },
+      {
+        "command": "sturdy.auth",
+        "title": "Sturdy Auth"
       }
     ]
   },

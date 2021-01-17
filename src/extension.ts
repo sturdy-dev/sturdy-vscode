@@ -3,9 +3,21 @@ import simpleGit, { SimpleGit, SimpleGitOptions } from "simple-git";
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 
 export function activate(context: vscode.ExtensionContext) {
+  const conf: any = vscode.workspace.getConfiguration().get("conf.sturdy");
   work();
   let disposable = vscode.commands.registerCommand("sturdy.setup", () => {
-    vscode.window.showInformationMessage("Hello Sturdy again!");
+    let gh =
+      "https://github.com/login/oauth/authorize?client_id=f5fade2c5f3011c13536&redirect_uri=" +
+      conf.api +
+      "/v3/oauth/github&scope=repo%20read:user%20user:email";
+    console.log(gh);
+    vscode.env.openExternal(vscode.Uri.parse(gh));
+  });
+  let setToken = vscode.commands.registerCommand("sturdy.auth", async () => {
+    const value = await vscode.window.showInputBox();
+    vscode.workspace
+      .getConfiguration()
+      .update("conf.sturdy.token", value, vscode.ConfigurationTarget.Global);
   });
   let onStart = vscode.commands.registerCommand("onStartupFinished", () =>
     work()
