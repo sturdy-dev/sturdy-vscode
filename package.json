@@ -39,7 +39,7 @@
           "conf.sturdy.remote": {
             "type": "string",
             "description": "Sturdy Remote",
-            "default": "git.getsturdy.com",
+            "default": "https://git.getsturdy.com",
             "scope": "window"
           }
         }

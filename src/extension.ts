@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import simpleGit, { SimpleGit, SimpleGitOptions } from "simple-git";
 import axios from "axios";
+import { urlToOptions } from "vscode-test/out/util";
 
 export function activate(context: vscode.ExtensionContext) {
   console.log("activate", vscode.workspace.workspaceFolders);
@@ -53,27 +54,30 @@ async function onSetToken() {
 async function work(gitRepoPath: string) {
   const conf: any = vscode.workspace.getConfiguration().get("conf.sturdy");
   let git = init(gitRepoPath);
-  let repos = await lookUp(git, conf);
-  // TODO
+  let reposRsp = await lookUp(git, conf);
+  let remotes = remoteAddrs(conf, reposRsp);
   var head = "";
   var knownConflicts = [];
   for (;;) {
     let currHead = await git.revparse("HEAD");
     if (head !== currHead) {
-      push(git, conf.remote, conf.userId);
+      remotes.forEach((r: any) => {
+        push(git, r, conf.userId);
+      });
       head = currHead;
     }
 
-    let rsp = await fetchConflicts(conf);
-    if (rsp.data.conflicts.length > knownConflicts.length) {
-      knownConflicts = rsp.data.conflicts;
-      vscode.window.showInformationMessage(
-        "You have conflicts: " +
-          knownConflicts
-            .map((c: any) => c.commit + " conflicts with " + c.counterpart)
-            .join(" and\n")
-      );
-    }
+    // TODO
+    // let rsp = await fetchConflicts(conf);
+    // if (rsp.data.conflicts.length > knownConflicts.length) {
+    //   knownConflicts = rsp.data.conflicts;
+    //   vscode.window.showInformationMessage(
+    //     "You have conflicts: " +
+    //       knownConflicts
+    //         .map((c: any) => c.commit + " conflicts with " + c.counterpart)
+    //         .join(" and\n")
+    //   );
+    // }
 
     await new Promise((resolve) => setTimeout(resolve, 3000));
   }
@@ -105,6 +109,17 @@ function init(gitRepoPath: string): SimpleGit {
   return simpleGit(options);
 }
 
+function remoteAddrs(conf: any, repos: any): string[] {
+  let uri = vscode.Uri.parse(conf.remote);
+  let base =
+    uri.scheme + "://git:" + conf.token + "@" + uri.authority + uri.path;
+  var out: string[] = [];
+  repos.data
+    .filter((r: any) => r.enabled)
+    .forEach((r: any) => out.push(base + r.id));
+  return out;
+}
+
 function push(git: SimpleGit, remote: string, userID: string) {
   git.branch().then((br: any) => {
     let currentBranch = br.current;
@@ -124,7 +139,7 @@ async function lookUp(git: SimpleGit, conf: any) {
       .filter((l: string) => l.length > 0)
       .forEach((l: string) => {
         let tokens = l.split("\t");
-        remotes.set(tokens[0], tokens[1].split("s")[0]);
+        remotes.set(tokens[0], tokens[1].split(" ")[0]);
       });
 
     let out: { remote_name: string; remote_url: string }[] = [];
