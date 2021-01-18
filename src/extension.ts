@@ -68,36 +68,39 @@ async function work(gitRepoPath: string) {
       head = currHead;
     }
 
-    // TODO
-    // let rsp = await fetchConflicts(conf);
-    // if (rsp.data.conflicts.length > knownConflicts.length) {
-    //   knownConflicts = rsp.data.conflicts;
-    //   vscode.window.showInformationMessage(
-    //     "You have conflicts: " +
-    //       knownConflicts
-    //         .map((c: any) => c.commit + " conflicts with " + c.counterpart)
-    //         .join(" and\n")
-    //   );
-    // }
+    let conflicts = await fetchConflicts(conf, reposRsp);
+    if (conflicts.length > knownConflicts.length) {
+      knownConflicts = conflicts;
+      vscode.window.showInformationMessage(
+        "You have conflicts: " +
+          knownConflicts
+            .map((c: any) => c.commit + " conflicts with " + c.counterpart)
+            .join(" and\n")
+      );
+    }
 
     await new Promise((resolve) => setTimeout(resolve, 3000));
   }
 }
 
-function fetchConflicts(conf: any) {
-  return axios.post(
-    conf.api + "/v3/plugins/conflicts",
-    {
-      repo_id: "magic",
-      branch_name: conf.userId,
-    },
-    {
-      headers: {
-        Cookie: "auth=" + conf.token,
-        "Content-Type": "application/json",
-      },
-    }
-  );
+function fetchConflicts(conf: any, repos: any) {
+  var out = new Map();
+  repos.data
+    .filter((r: any) => r.enabled === true)
+    .forEach(async (r: any) => {
+      let rsp = await axios.get(
+        conf.api + "/v3/conflicts/check/" + r.owner + "/" + r.name,
+        {
+          headers: {
+            Cookie: "auth=" + conf.token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      let key = r.owner + "/" + r.name;
+      out.set(key, rsp.data.conflicts);
+    });
+  return [].concat.apply([], Array.from(out.values()));
 }
 
 function init(gitRepoPath: string): SimpleGit {
