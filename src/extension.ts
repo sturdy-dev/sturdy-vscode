@@ -4,19 +4,21 @@ import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 
 export function activate(context: vscode.ExtensionContext) {
   console.log("activate", vscode.workspace.workspaceFolders);
-  let gitRepoPath : string = "";
-  if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+  let gitRepoPath: string = "";
+  if (
+    vscode.workspace.workspaceFolders &&
+    vscode.workspace.workspaceFolders.length > 0
+  ) {
     gitRepoPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
   }
 
   const conf: any = vscode.workspace.getConfiguration().get("conf.sturdy");
-  
+
   if (gitRepoPath.length > 0) {
     work(gitRepoPath);
   } else {
-    console.log("no repo path found, skipping work")
+    console.log("no repo path found, skipping work");
   }
-
 
   let disposable = vscode.commands.registerCommand("sturdy.setup", () => {
     let gh =
@@ -33,13 +35,12 @@ export function activate(context: vscode.ExtensionContext) {
       .update("conf.sturdy.token", value, vscode.ConfigurationTarget.Global);
   });
   let onStart = vscode.commands.registerCommand("onStartupFinished", () => {
-      if (gitRepoPath.length > 0) {
-        work(gitRepoPath);
-      } else {
-        console.log("no repo path found, skipping work")
-      }
+    if (gitRepoPath.length > 0) {
+      work(gitRepoPath);
+    } else {
+      console.log("no repo path found, skipping work");
     }
-  );
+  });
 
   context.subscriptions.push(disposable, onStart);
 }
@@ -53,7 +54,6 @@ async function work(gitRepoPath: string) {
     let currHead = await git.revparse("HEAD");
     if (head !== currHead) {
       push(git, conf.remote, conf.userId);
-      notifyPush(conf);
       head = currHead;
     }
 
@@ -88,37 +88,8 @@ function fetchConflicts(conf: any) {
   );
 }
 
-function notifyPush(conf: any) {
-  return axios.post(
-    conf.api + "/v3/plugins/notifypush",
-    {
-      repo_id: "magic",
-      branch_name: conf.userId,
-    },
-    {
-      headers: {
-        Cookie: "auth=" + conf.token,
-        "Content-Type": "application/json",
-      },
-    }
-  );
-}
-
-const handleResponse = (response: AxiosResponse) => {
-  console.log(response.data);
-};
-
-const handleError = (error: AxiosError) => {
-  if (error.response) {
-    console.log(error.response.data);
-    console.log(error.response.status);
-  } else {
-    console.log(error.message);
-  }
-};
-
 function init(gitRepoPath: string): SimpleGit {
-  console.log("init sturdy", gitRepoPath)
+  console.log("init sturdy", gitRepoPath);
   const options: SimpleGitOptions = {
     baseDir: gitRepoPath,
     binary: "git",
