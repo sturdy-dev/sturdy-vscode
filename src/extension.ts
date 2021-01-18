@@ -54,6 +54,7 @@ async function onSetToken() {
 async function work(gitRepoPath: string) {
   const conf: any = vscode.workspace.getConfiguration().get("conf.sturdy");
   let git = init(gitRepoPath);
+  let user = await getUser(conf);
   let reposRsp = await lookUp(git, conf);
   let remotes = remoteAddrs(conf, reposRsp);
   var head = "";
@@ -62,7 +63,7 @@ async function work(gitRepoPath: string) {
     let currHead = await git.revparse("HEAD");
     if (head !== currHead) {
       remotes.forEach((r: any) => {
-        push(git, r, conf.userId);
+        push(git, r, user.data.id);
       });
       head = currHead;
     }
@@ -116,7 +117,7 @@ function remoteAddrs(conf: any, repos: any): string[] {
   var out: string[] = [];
   repos.data
     .filter((r: any) => r.enabled)
-    .forEach((r: any) => out.push(base + r.id));
+    .forEach((r: any) => out.push(base + r.id + ".git"));
   return out;
 }
 
@@ -130,6 +131,14 @@ function push(git: SimpleGit, remote: string, userID: string) {
 // this method is called when your extension is deactivated
 export function deactivate() {}
 
+function getUser(conf: any) {
+  return axios.get(conf.api + "/v3/user", {
+    headers: {
+      Cookie: "auth=" + conf.token,
+      "Content-Type": "application/json",
+    },
+  });
+}
 async function lookUp(git: SimpleGit, conf: any) {
   let rsp = await git.remote(["-v"]);
   if (typeof rsp === "string") {
