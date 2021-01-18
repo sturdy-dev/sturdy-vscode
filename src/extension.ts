@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import simpleGit, { SimpleGit, SimpleGitOptions } from "simple-git";
-import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
+import axios from "axios";
 
 export function activate(context: vscode.ExtensionContext) {
   console.log("activate", vscode.workspace.workspaceFolders);
@@ -20,20 +20,8 @@ export function activate(context: vscode.ExtensionContext) {
     console.log("no repo path found, skipping work");
   }
 
-  let disposable = vscode.commands.registerCommand("sturdy.setup", () => {
-    let gh =
-      "https://github.com/login/oauth/authorize?client_id=f5fade2c5f3011c13536&redirect_uri=" +
-      conf.api +
-      "/v3/oauth/github&scope=repo%20read:user%20user:email";
-    console.log(gh);
-    vscode.env.openExternal(vscode.Uri.parse(gh));
-  });
-  let setToken = vscode.commands.registerCommand("sturdy.auth", async () => {
-    const value = await vscode.window.showInputBox();
-    vscode.workspace
-      .getConfiguration()
-      .update("conf.sturdy.token", value, vscode.ConfigurationTarget.Global);
-  });
+  let setUpCmd = vscode.commands.registerCommand("sturdy.setup", onSetup);
+  let setTokenCmd = vscode.commands.registerCommand("sturdy.auth", onSetToken);
   let onStart = vscode.commands.registerCommand("onStartupFinished", () => {
     if (gitRepoPath.length > 0) {
       work(gitRepoPath);
@@ -42,7 +30,24 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  context.subscriptions.push(disposable, onStart);
+  context.subscriptions.push(setUpCmd, setTokenCmd, onStart);
+}
+
+function onSetup() {
+  const conf: any = vscode.workspace.getConfiguration().get("conf.sturdy");
+  let gh =
+    "https://github.com/login/oauth/authorize?client_id=f5fade2c5f3011c13536&redirect_uri=" +
+    conf.api +
+    "/v3/oauth/github&scope=repo%20read:user%20user:email";
+  console.log(gh);
+  vscode.env.openExternal(vscode.Uri.parse(gh));
+}
+
+async function onSetToken() {
+  const value = await vscode.window.showInputBox();
+  vscode.workspace
+    .getConfiguration()
+    .update("conf.sturdy.token", value, vscode.ConfigurationTarget.Global);
 }
 
 async function work(gitRepoPath: string) {
