@@ -3,8 +3,21 @@ import simpleGit, { SimpleGit, SimpleGitOptions } from "simple-git";
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 
 export function activate(context: vscode.ExtensionContext) {
+  console.log("activate", vscode.workspace.workspaceFolders);
+  let gitRepoPath : string = "";
+  if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+    gitRepoPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
+  }
+
   const conf: any = vscode.workspace.getConfiguration().get("conf.sturdy");
-  work();
+  
+  if (gitRepoPath.length > 0) {
+    work(gitRepoPath);
+  } else {
+    console.log("no repo path found, skipping work")
+  }
+
+
   let disposable = vscode.commands.registerCommand("sturdy.setup", () => {
     let gh =
       "https://github.com/login/oauth/authorize?client_id=f5fade2c5f3011c13536&redirect_uri=" +
@@ -19,16 +32,21 @@ export function activate(context: vscode.ExtensionContext) {
       .getConfiguration()
       .update("conf.sturdy.token", value, vscode.ConfigurationTarget.Global);
   });
-  let onStart = vscode.commands.registerCommand("onStartupFinished", () =>
-    work()
+  let onStart = vscode.commands.registerCommand("onStartupFinished", () => {
+      if (gitRepoPath.length > 0) {
+        work(gitRepoPath);
+      } else {
+        console.log("no repo path found, skipping work")
+      }
+    }
   );
 
   context.subscriptions.push(disposable, onStart);
 }
 
-async function work() {
+async function work(gitRepoPath: string) {
   const conf: any = vscode.workspace.getConfiguration().get("conf.sturdy");
-  let git = init();
+  let git = init(gitRepoPath);
   var head = "";
   var knownConflicts = [];
   for (;;) {
@@ -99,9 +117,10 @@ const handleError = (error: AxiosError) => {
   }
 };
 
-function init(): SimpleGit {
+function init(gitRepoPath: string): SimpleGit {
+  console.log("init sturdy", gitRepoPath)
   const options: SimpleGitOptions = {
-    baseDir: process.cwd(),
+    baseDir: gitRepoPath,
     binary: "git",
     maxConcurrentProcesses: 6,
   };
