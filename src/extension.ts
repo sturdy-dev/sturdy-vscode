@@ -53,6 +53,8 @@ async function onSetToken() {
 async function work(gitRepoPath: string) {
   const conf: any = vscode.workspace.getConfiguration().get("conf.sturdy");
   let git = init(gitRepoPath);
+  let repos = await lookUp(git, conf);
+  // TODO
   var head = "";
   var knownConflicts = [];
   for (;;) {
@@ -112,3 +114,33 @@ function push(git: SimpleGit, remote: string, userID: string) {
 
 // this method is called when your extension is deactivated
 export function deactivate() {}
+
+async function lookUp(git: SimpleGit, conf: any) {
+  let rsp = await git.remote(["-v"]);
+  if (typeof rsp === "string") {
+    let remotes = new Map();
+    let lines = rsp
+      .split("\n")
+      .filter((l: string) => l.length > 0)
+      .forEach((l: string) => {
+        let tokens = l.split("\t");
+        remotes.set(tokens[0], tokens[1].split("s")[0]);
+      });
+
+    let out: { remote_name: string; remote_url: string }[] = [];
+    remotes.forEach((k: any, v: any) => {
+      out.push({ remote_name: v, remote_url: k });
+    });
+
+    return axios.post(
+      conf.api + "/v3/conflicts/lookup",
+      { repos: out },
+      {
+        headers: {
+          Cookie: "auth=" + conf.token,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+  }
+}
