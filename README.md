@@ -1,5 +1,5 @@
 <p align="center">
-  <a title="Learn more about Sturdy Code Collab" href="https://getsturdy.com"><img style="width:70%; height:70%;" src="images/sturdy_logo_transparent.png" alt="Sturdy code collab logo" /></a>
+  <a title="Learn more about Sturdy Code Collab" href="https://getsturdy.com"><img style="width:70%; height:70%;" src="https://getsturdy.com/img/sturdy_logo_transparent.png" alt="Sturdy code collab logo" /></a>
 </p>
 
 # Sturdy
