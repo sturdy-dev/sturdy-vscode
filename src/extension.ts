@@ -12,8 +12,6 @@ export function activate(context: vscode.ExtensionContext) {
     gitRepoPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
   }
 
-  const conf: any = vscode.workspace.getConfiguration().get("conf.sturdy");
-
   if (gitRepoPath.length > 0) {
     work(gitRepoPath);
   } else {
