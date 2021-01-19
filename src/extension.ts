@@ -55,8 +55,9 @@ async function work(gitRepoPath: string) {
   let reposRsp = await lookUp(git, conf);
   let remotes = remoteAddrs(conf, reposRsp);
   let head = "";
-  let knownConflicts = [];
-  for (;;) {
+  let knownConflicts: any[] = [];
+
+  for (; ;) {
     let currHead = await git.revparse("HEAD");
     if (head !== currHead) {
       remotes.forEach((r: any) => {
@@ -66,19 +67,39 @@ async function work(gitRepoPath: string) {
     }
 
     fetchConflicts(conf, reposRsp).then((conflicts: []) => {
-      if (conflicts.length !== knownConflicts.length) {
-        vscode.window.showInformationMessage(
-          "You have conflicts: " +
-            conflicts
-              .map((c: any) => c.commit + " conflicts with " + c.counterpart)
-              .join(" and\n")
-        );
+      if (!equalConflicts(conflicts, knownConflicts)) {
+        let msg = "You have conflicts: " +
+          conflicts.map((c: any) => c.commit + " conflicts with " + c.counterpart)
+            .join(" and\n");
+        vscode.window
+          .showInformationMessage(msg, ...['View'])
+          .then(selection => {
+            if (selection === 'View') {
+              console.log(selection);
+              let uri =
+                "https://getsturdy.com/repo/"
+              console.log(uri);
+              vscode.env.openExternal(vscode.Uri.parse(uri));
+            }
+          });
       }
       knownConflicts = conflicts;
     });
 
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
+}
+
+function isSetsEqual(a: Set<any>, b: Set<any>) {
+  return a.size === b.size && [...a].every(value => b.has(value)) && [...b].every(value => a.has(value));
+}
+
+function equalConflicts(knownConflicts: any[], newConflicts: any[]) {
+  let knownSet = new Set();
+  let newSet = new Set();
+  knownConflicts.forEach(i => { knownSet.add(i.commit) })
+  newConflicts.forEach(i => { newSet.add(i.commit) })
+  return isSetsEqual(newSet, knownSet);
 }
 
 function fetchConflicts(conf: any, repos: any): Promise<[]> {
@@ -132,7 +153,7 @@ function push(git: SimpleGit, remote: string, userID: string) {
 }
 
 // this method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() { }
 
 function getUser(conf: any) {
   return axios.get(conf.api + "/v3/user", {
