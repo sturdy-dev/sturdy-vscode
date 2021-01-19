@@ -18,7 +18,6 @@ export function activate(context: vscode.ExtensionContext) {
     console.log("no repo path found, skipping work");
   }
 
-  let setUpCmd = vscode.commands.registerCommand("sturdy.setup", onSetup);
   let setTokenCmd = vscode.commands.registerCommand("sturdy.auth", onSetToken);
   let onStart = vscode.commands.registerCommand("onStartupFinished", () => {
     if (gitRepoPath.length > 0) {
@@ -28,17 +27,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  context.subscriptions.push(setUpCmd, setTokenCmd, onStart);
-}
-
-function onSetup() {
-  const conf: any = vscode.workspace.getConfiguration().get("conf.sturdy");
-  let gh =
-    "https://github.com/login/oauth/authorize?client_id=f5fade2c5f3011c13536&redirect_uri=" +
-    conf.api +
-    "/v3/oauth/github&scope=repo%20read:user%20user:email";
-  console.log(gh);
-  vscode.env.openExternal(vscode.Uri.parse(gh));
+  context.subscriptions.push(setTokenCmd, onStart);
 }
 
 async function onSetToken() {

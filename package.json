@@ -42,10 +42,6 @@
     ],
     "commands": [
       {
-        "command": "sturdy.setup",
-        "title": "Sturdy Setup"
-      },
-      {
         "command": "sturdy.auth",
         "title": "Sturdy Auth"
       }
