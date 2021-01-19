@@ -68,18 +68,18 @@ async function work(gitRepoPath: string) {
     }
 
     fetchConflicts(conf, reposRsp).then((conflicts: []) => {
-      if (conflicts.length > knownConflicts.length) {
-        knownConflicts = conflicts;
+      if (conflicts.length !== knownConflicts.length) {
         vscode.window.showInformationMessage(
           "You have conflicts: " +
-            knownConflicts
+            conflicts
               .map((c: any) => c.commit + " conflicts with " + c.counterpart)
               .join(" and\n")
         );
       }
+      knownConflicts = conflicts;
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 }
 
@@ -98,7 +98,10 @@ function fetchConflicts(conf: any, repos: any): Promise<[]> {
       );
     })
   ).then((responses: any) => {
-    return responses.map((r: any) => r.data.conflicts).flat();
+    return responses
+      .map((r: any) => r.data.conflicts)
+      .filter((r: any) => r)
+      .flat();
   });
 }
 
