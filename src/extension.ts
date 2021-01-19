@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import simpleGit, { SimpleGit, SimpleGitOptions } from "simple-git";
 import axios from "axios";
-import { urlToOptions } from "vscode-test/out/util";
 
 export function activate(context: vscode.ExtensionContext) {
   console.log("activate", vscode.workspace.workspaceFolders);
@@ -68,27 +67,27 @@ async function work(gitRepoPath: string) {
       head = currHead;
     }
 
-    let conflicts = await fetchConflicts(conf, reposRsp);
-    if (conflicts.length > knownConflicts.length) {
-      knownConflicts = conflicts;
-      vscode.window.showInformationMessage(
-        "You have conflicts: " +
-          knownConflicts
-            .map((c: any) => c.commit + " conflicts with " + c.counterpart)
-            .join(" and\n")
-      );
-    }
+    fetchConflicts(conf, reposRsp).then((conflicts: []) => {
+      if (conflicts.length > knownConflicts.length) {
+        knownConflicts = conflicts;
+        vscode.window.showInformationMessage(
+          "You have conflicts: " +
+            knownConflicts
+              .map((c: any) => c.commit + " conflicts with " + c.counterpart)
+              .join(" and\n")
+        );
+      }
+    });
 
     await new Promise((resolve) => setTimeout(resolve, 3000));
   }
 }
 
-function fetchConflicts(conf: any, repos: any) {
-  var out = new Map();
-  repos.data
-    .filter((r: any) => r.enabled === true)
-    .forEach(async (r: any) => {
-      let rsp = await axios.get(
+function fetchConflicts(conf: any, repos: any): Promise<[]> {
+  let enabledRepos = repos.data.filter((r: any) => r.enabled);
+  return Promise.all(
+    enabledRepos.map((r: any) => {
+      return axios.get(
         conf.api + "/v3/conflicts/check/" + r.owner + "/" + r.name,
         {
           headers: {
@@ -97,10 +96,10 @@ function fetchConflicts(conf: any, repos: any) {
           },
         }
       );
-      let key = r.owner + "/" + r.name;
-      out.set(key, rsp.data.conflicts);
-    });
-  return [].concat.apply([], Array.from(out.values()));
+    })
+  ).then((responses: any) => {
+    return responses.map((r: any) => r.data.conflicts).flat();
+  });
 }
 
 function init(gitRepoPath: string): SimpleGit {
