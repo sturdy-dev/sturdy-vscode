@@ -1,14 +1,25 @@
 {
   "name": "sturdy",
-  "displayName": "Sturdy",
-  "description": "Tells you about merge conflicts before they happen",
+  "displayName": "Sturdy - Code Collab",
+  "description": "Notifies you of merge conflicts in real-time",
   "publisher": "sturdy",
-  "version": "0.0.1",
+  "author": {
+    "name": "Sturdy Devtools",
+    "email": "founders@getsturdy.com"
+  },
+  "version": "0.1.0",
   "engines": {
     "vscode": "^1.52.0"
   },
+  "homepage": "https://getsturdy.com",
+  "icon": "images/sturdy_logo_small.png",
   "categories": [
     "Other"
+  ],
+  "keywords": [
+    "git",
+    "github",
+    "collaboration"
   ],
   "activationEvents": [
     "onStartupFinished",
