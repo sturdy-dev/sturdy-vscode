@@ -56,8 +56,8 @@ async function work(gitRepoPath: string) {
   let user = await getUser(conf);
   let reposRsp = await lookUp(git, conf);
   let remotes = remoteAddrs(conf, reposRsp);
-  var head = "";
-  var knownConflicts = [];
+  let head = "";
+  let knownConflicts = [];
   for (;;) {
     let currHead = await git.revparse("HEAD");
     if (head !== currHead) {
@@ -116,7 +116,7 @@ function remoteAddrs(conf: any, repos: any): string[] {
   let uri = vscode.Uri.parse(conf.remote);
   let base =
     uri.scheme + "://git:" + conf.token + "@" + uri.authority + uri.path;
-  var out: string[] = [];
+  let out: string[] = [];
   repos.data
     .filter((r: any) => r.enabled)
     .forEach((r: any) => out.push(base + r.id + ".git"));
