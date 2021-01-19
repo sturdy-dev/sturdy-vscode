@@ -20,11 +20,6 @@
       {
         "title": "Sturdy",
         "properties": {
-          "conf.sturdy.userId": {
-            "type": "string",
-            "description": "Sturdy user ID",
-            "scope": "application"
-          },
           "conf.sturdy.api": {
             "type": "string",
             "description": "Sturdy Backend API address",
