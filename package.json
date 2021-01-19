@@ -4,8 +4,8 @@
   "description": "Notifies you of merge conflicts in real-time",
   "publisher": "sturdy",
   "author": {
-    "name": "Sturdy Devtools",
-    "email": "founders@getsturdy.com"
+    "name": "Kiril Videlov",
+    "email": "kiril@getsturdy.com"
   },
   "version": "0.1.0",
   "engines": {
