@@ -11,7 +11,7 @@ Sturdy is a code collaboration tool that makes code collaboration simpler. Get n
 Detects merge conflicts in **real-time**. Sturdy proactively searches for merge issues between your local work and the local work of other developers on your project.
 
 ### Conflicts with the remote **default** branch
-
+![Conflict notification](https://getsturdy.com/img/conflict-demo.gif)
 ### Conflicts with unmerged **PRs**
 
 Coming soon
@@ -25,8 +25,6 @@ Coming soon
 Coming soon
 
 ### Shows you **exactly** where the potential issue is
-
-\!\[feature X\]\(images/feature-x.png\)
 
 ## Setup
 
