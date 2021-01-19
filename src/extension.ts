@@ -40,41 +40,54 @@ async function onSetToken() {
 async function work(gitRepoPath: string) {
   const conf: any = vscode.workspace.getConfiguration().get("conf.sturdy");
   let git = init(gitRepoPath);
-  let user = await getUser(conf);
-  let reposRsp = await lookUp(git, conf);
-  let knownConflicts: any[] = [];
 
-  pushLoop(gitRepoPath, user, knownConflicts, conf, reposRsp);
-  conflictsLoop(reposRsp, knownConflicts, conf);
+  let user = await getUser(conf)
+  if (!user) {
+    console.log("could not load user, aborting")
+    return;
+  }
+
+  let repos = await lookUp(git, conf);
+  if (!repos) {
+    console.log("could not lookup repos, aborting")
+    return;
+  }
+
+  pushLoop(gitRepoPath, user, conf, repos);
+  conflictsLoop(repos, conf);
 }
 
 async function pushLoop(
   gitRepoPath: string,
-  user: any,
-  knownConflicts: any[],
+  user: User,
   conf: any,
-  reposRsp: any
+  repos: FindReposResponse
 ) {
-  let remotes = remoteAddrs(conf, reposRsp);
+  console.log("staring pushLoop")
+
+  let remotes = remoteAddrs(conf, repos);
   let git = init(gitRepoPath);
   let head = "";
-  for (;;) {
+  for (; ;) {
     let currHead = await git.revparse("HEAD");
+    console.log("pushLoop", head, currHead)
     if (head !== currHead) {
       remotes.forEach((r: any) => {
-        push(git, r, user.data.id);
+        push(git, r, user.id);
       });
       head = currHead;
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      handleConflicts(conf, reposRsp, knownConflicts);
+      handleConflicts(conf, repos);
+
     }
     await new Promise((resolve) => setTimeout(resolve, 2000));
   }
 }
 
-async function conflictsLoop(reposRsp: any, knownConflicts: any[], conf: any) {
-  for (;;) {
-    handleConflicts(conf, reposRsp, knownConflicts);
+async function conflictsLoop(repos: FindReposResponse, conf: any) {
+  for (; ;) {
+    console.log("conflictsLoop")
+    handleConflicts(conf, repos);
     await new Promise((resolve) => setTimeout(resolve, 60000));
   }
 }
@@ -87,61 +100,72 @@ function isSetsEqual(a: Set<any>, b: Set<any>) {
   );
 }
 
-function equalConflicts(knownConflicts: any[], newConflicts: any[]) {
+function equalConflicts(knownConflicts: ConflictsForRepo[], newConflicts: ConflictsForRepo[]) {
   let knownSet = new Set();
   let newSet = new Set();
+
   knownConflicts.forEach((i) => {
-    knownSet.add(i.commit);
+    if (i.conflicts.conflicts) {
+      i.conflicts.conflicts.forEach(c => {
+        knownSet.add(c.commit)
+      })
+    }
   });
   newConflicts.forEach((i) => {
-    newSet.add(i.commit);
+    if (i.conflicts.conflicts) {
+      i.conflicts.conflicts.forEach(c => {
+        newSet.add(c.commit)
+      })
+    }
   });
   return isSetsEqual(newSet, knownSet);
 }
 
-function handleConflicts(conf: any, reposRsp: any, knownConflicts: any[]) {
-  fetchConflicts(conf, reposRsp).then((conflicts: []) => {
-    if (!equalConflicts(conflicts, knownConflicts)) {
-      let msg =
-        "You have conflicts: " +
-        conflicts
-          .map((c: any) => c.commit + " conflicts with " + c.counterpart)
-          .join(" and\n");
+let globalStateKnownConflicts : ConflictsForRepo[] = [];
+
+function handleConflicts(conf: any, repos: FindReposResponse) {
+  fetchConflicts(conf, repos).then((conflicts: ConflictsForRepo[]) => {
+    console.log("fetched conflicts", conflicts)
+
+    if (!equalConflicts(globalStateKnownConflicts, conflicts) && conflicts.length > 0) {
+      let first = conflicts[0]
+      let repoOwner = first.repoOwner
+      let repoName = first.repoName
+
+      let msg = "You have conflicts:\n";
+      
+      conflicts.forEach(c => {
+        c.conflicts.conflicts.forEach(cc => {
+          msg += cc.commit + " conflicts with " + cc.counterpart + "\n"
+        })
+      })
+
       vscode.window
         .showInformationMessage(msg, ...["View"])
         .then((selection) => {
           if (selection === "View") {
-            console.log(selection);
-            let uri = "https://getsturdy.com/repo/";
-            console.log(uri);
+            let uri = "https://getsturdy.com/repo/" + repoOwner + "/" + repoName;
             vscode.env.openExternal(vscode.Uri.parse(uri));
           }
         });
     }
-    knownConflicts = conflicts;
-  });
+
+    globalStateKnownConflicts = conflicts;
+  })
 }
 
-function fetchConflicts(conf: any, repos: any): Promise<[]> {
-  let enabledRepos = repos.data.filter((r: any) => r.enabled);
-  return Promise.all(
-    enabledRepos.map((r: any) => {
-      return axios.get(
-        conf.api + "/v3/conflicts/check/" + r.owner + "/" + r.name,
-        {
-          headers: {
-            Cookie: "auth=" + conf.token,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+function fetchConflicts(conf: any, repos: FindReposResponse): Promise<ConflictsForRepo[]> {
+  console.log("fetch conflicts")
+
+  const requests: Promise<ConflictsForRepo>[] = repos.repos
+    .filter((r) => r.enabled)
+    .map((r) => {
+      return getConflictsForRepo(conf, r.owner, r.name);
     })
-  ).then((responses: any) => {
-    return responses
-      .map((r: any) => r.data.conflicts)
-      .filter((r: any) => r)
-      .flat();
-  });
+
+  return Promise.all<ConflictsForRepo>(requests).then(responses => {
+    return responses.filter(r => r.conflicts)
+  })
 }
 
 function init(gitRepoPath: string): SimpleGit {
@@ -154,12 +178,12 @@ function init(gitRepoPath: string): SimpleGit {
   return simpleGit(options);
 }
 
-function remoteAddrs(conf: any, repos: any): string[] {
+function remoteAddrs(conf: any, repos: FindReposResponse): string[] {
   let uri = vscode.Uri.parse(conf.remote);
   let base =
     uri.scheme + "://git:" + conf.token + "@" + uri.authority + uri.path;
   let out: string[] = [];
-  repos.data
+  repos.repos
     .filter((r: any) => r.enabled)
     .forEach((r: any) => out.push(base + r.id + ".git"));
   return out;
@@ -168,27 +192,59 @@ function remoteAddrs(conf: any, repos: any): string[] {
 function push(git: SimpleGit, remote: string, userID: string) {
   git.branch().then((br: any) => {
     let currentBranch = br.current;
+    console.log("pushing", currentBranch, userID)
     git.push(["--force", remote, currentBranch + ":" + userID]);
   });
 }
 
 // this method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() { }
 
-function getUser(conf: any) {
-  return axios.get(conf.api + "/v3/user", {
-    headers: {
-      Cookie: "auth=" + conf.token,
-      "Content-Type": "application/json",
-    },
-  });
+interface User {
+  id: string;
+  name: string;
 }
-async function lookUp(git: SimpleGit, conf: any) {
+
+const getUser = async (conf: any): Promise<User> => {
+  try {
+    const response = await axios.get<User>(conf.api + "/v3/user", {
+      headers: {
+        Cookie: "auth=" + conf.token,
+        "Content-Type": "application/json",
+      }
+    });
+    const user = response.data;
+    return user;
+  } catch (err) {
+    if (err && err.response) {
+      // const axiosError = err as AxiosError<ServerError>
+      // return axiosError.response.data;
+      return err;
+    }
+    throw err;
+  }
+};
+
+interface SturdyRepository {
+  id: string;
+  full_name: string;
+  owner: string;
+  name: string;
+  enabled: Boolean;
+}
+
+interface FindReposResponse {
+  repos: Array<SturdyRepository>;
+}
+
+const lookUp = async (git: SimpleGit, conf: any): Promise<FindReposResponse> => {
+  console.log("lookup")
+
   let rsp = await git.remote(["-v"]);
   if (typeof rsp === "string") {
     let remotes = new Map();
-    let lines = rsp
-      .split("\n")
+
+    rsp.split("\n")
       .filter((l: string) => l.length > 0)
       .forEach((l: string) => {
         let tokens = l.split("\t");
@@ -200,15 +256,69 @@ async function lookUp(git: SimpleGit, conf: any) {
       out.push({ remote_name: v, remote_url: k });
     });
 
-    return axios.post(
-      conf.api + "/v3/conflicts/lookup",
-      { repos: out },
-      {
-        headers: {
-          Cookie: "auth=" + conf.token,
-          "Content-Type": "application/json",
-        },
+    let payload = { repos: out };
+
+    console.log("lookup", JSON.stringify(payload))
+
+    try {
+      const response = await axios.post<FindReposResponse>(conf.api + "/v3/conflicts/lookup",
+        payload,
+        {
+          headers: {
+            Cookie: "auth=" + conf.token,
+            "Content-Type": "application/json",
+          }
+        });
+      const res = response.data;
+      return res;
+    } catch (err) {
+      if (err && err.response) {
+        // const axiosError = err as AxiosError<ServerError>
+        // return axiosError.response.data;
+        return err;
       }
-    );
+      throw err;
+    }
   }
+
+  return Promise.reject(new Error('could not get remotes'));
+};
+
+interface Conflict {
+  commit: string;
+  counterpart: string;
 }
+
+interface Conflicts {
+  conflicts: Array<Conflict>;
+}
+
+interface ConflictsForRepo {
+  conflicts: Conflicts
+  repoOwner: string
+  repoName: string
+}
+
+const getConflictsForRepo = async (conf: any, owner: string, name: string): Promise<ConflictsForRepo> => {
+  try {
+    const response = await axios.get<Conflicts>(conf.api + "/v3/conflicts/check/" + owner + "/" + name, {
+      headers: {
+        Cookie: "auth=" + conf.token,
+        "Content-Type": "application/json",
+      }
+    });
+    const d = response.data;
+    return {
+      conflicts: d,
+      repoOwner: owner,
+      repoName: name,
+    };
+  } catch (err) {
+    if (err && err.response) {
+      // const axiosError = err as AxiosError<ServerError>
+      // return axiosError.response.data;
+      return err;
+    }
+    throw err;
+  }
+};
