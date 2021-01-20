@@ -53,8 +53,16 @@ async function work(gitRepoPath: string) {
     return;
   }
 
+
+
   pushLoop(git, user, conf, repos);
-  conflictsLoop(repos, conf);
+  conflictsLoop(repos, conf, git);
+}
+
+async function getPatch(git: SimpleGit) {
+  let res = await git.diff()
+  console.log("getPatch", res);
+  return res;
 }
 
 async function pushLoop(
@@ -76,17 +84,19 @@ async function pushLoop(
       });
       head = currHead;
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      handleConflicts(conf, repos);
 
+      let workingTreeDiff = await getPatch(git);
+      handleConflicts(conf, repos, workingTreeDiff);
     }
     await new Promise((resolve) => setTimeout(resolve, 2000));
   }
 }
 
-async function conflictsLoop(repos: FindReposResponse, conf: any) {
+async function conflictsLoop(repos: FindReposResponse, conf: any, git: SimpleGit) {
   for (; ;) {
     console.log("conflictsLoop")
-    handleConflicts(conf, repos);
+    let workingTreeDiff = await getPatch(git);
+    handleConflicts(conf, repos, workingTreeDiff);
     await new Promise((resolve) => setTimeout(resolve, 60000));
   }
 }
@@ -120,10 +130,10 @@ function equalConflicts(knownConflicts: ConflictsForRepo[], newConflicts: Confli
   return isSetsEqual(newSet, knownSet);
 }
 
-let globalStateKnownConflicts : ConflictsForRepo[] = [];
+let globalStateKnownConflicts: ConflictsForRepo[] = [];
 
-function handleConflicts(conf: any, repos: FindReposResponse) {
-  fetchConflicts(conf, repos).then((conflicts: ConflictsForRepo[]) => {
+function handleConflicts(conf: any, repos: FindReposResponse, workingTreeDiff: string) {
+  fetchConflicts(conf, repos, workingTreeDiff).then((conflicts: ConflictsForRepo[]) => {
     console.log("fetched conflicts", conflicts)
 
     if (!equalConflicts(globalStateKnownConflicts, conflicts) && conflicts.length > 0) {
@@ -132,7 +142,7 @@ function handleConflicts(conf: any, repos: FindReposResponse) {
       let repoName = first.repoName
 
       let msg = "You have conflicts:\n";
-      
+
       conflicts.forEach(c => {
         c.conflicts.conflicts.forEach(cc => {
           msg += cc.commit + " conflicts with " + cc.counterpart + "\n"
@@ -153,13 +163,13 @@ function handleConflicts(conf: any, repos: FindReposResponse) {
   })
 }
 
-function fetchConflicts(conf: any, repos: FindReposResponse): Promise<ConflictsForRepo[]> {
+function fetchConflicts(conf: any, repos: FindReposResponse, workingTreeDiff: string): Promise<ConflictsForRepo[]> {
   console.log("fetch conflicts")
 
   const requests: Promise<ConflictsForRepo>[] = repos.repos
     .filter((r) => r.enabled)
     .map((r) => {
-      return getConflictsForRepo(conf, r.owner, r.name);
+      return getConflictsForRepo(conf, r.owner, r.name, workingTreeDiff);
     })
 
   return Promise.all<ConflictsForRepo>(requests).then(responses => {
@@ -298,14 +308,18 @@ interface ConflictsForRepo {
   repoName: string
 }
 
-const getConflictsForRepo = async (conf: any, owner: string, name: string): Promise<ConflictsForRepo> => {
+const getConflictsForRepo = async (conf: any, owner: string, name: string, workingTreeDiff: string): Promise<ConflictsForRepo> => {
   try {
-    const response = await axios.get<Conflicts>(conf.api + "/v3/conflicts/check/" + owner + "/" + name, {
-      headers: {
-        Cookie: "auth=" + conf.token,
-        "Content-Type": "application/json",
-      }
-    });
+    console.log("getConflictsForRepo", owner, name, workingTreeDiff);
+
+    const response = await axios.post<Conflicts>(conf.api + "/v3/conflicts/check/" + owner + "/" + name,
+      { working_tree_diff: workingTreeDiff },
+      {
+        headers: {
+          Cookie: "auth=" + conf.token,
+          "Content-Type": "application/json",
+        }
+      });
     const d = response.data;
     return {
       conflicts: d,
