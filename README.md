@@ -10,7 +10,7 @@ Detects merge conflicts in **real-time**. Sturdy proactively searches for merge 
 
 ### Conflicts with the remote **default** branch
 
-When another developer on your team push changes to the default branch, Sturdy checks for conflicts with your local (unpushed) work an informs you of conflicts as soon as they occur.
+When another developer on your team push changes to the default branch, Sturdy checks for conflicts with your local (unpushed) work and informs you of conflicts as soon as they occur.
 
 ![Conflict notification](https://getsturdy.com/img/head-conflicts.gif)
 
