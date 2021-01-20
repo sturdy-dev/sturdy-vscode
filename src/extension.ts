@@ -39,7 +39,7 @@ async function onSetToken() {
 
 async function work(gitRepoPath: string) {
   const conf: any = vscode.workspace.getConfiguration().get("conf.sturdy");
-  let git = init(gitRepoPath);
+  let git = initGit(gitRepoPath);
 
   let user = await getUser(conf)
   if (!user) {
@@ -53,12 +53,12 @@ async function work(gitRepoPath: string) {
     return;
   }
 
-  pushLoop(gitRepoPath, user, conf, repos);
+  pushLoop(git, user, conf, repos);
   conflictsLoop(repos, conf);
 }
 
 async function pushLoop(
-  gitRepoPath: string,
+  git: SimpleGit,
   user: User,
   conf: any,
   repos: FindReposResponse
@@ -66,7 +66,6 @@ async function pushLoop(
   console.log("staring pushLoop")
 
   let remotes = remoteAddrs(conf, repos);
-  let git = init(gitRepoPath);
   let head = "";
   for (; ;) {
     let currHead = await git.revparse("HEAD");
@@ -168,7 +167,7 @@ function fetchConflicts(conf: any, repos: FindReposResponse): Promise<ConflictsF
   })
 }
 
-function init(gitRepoPath: string): SimpleGit {
+function initGit(gitRepoPath: string): SimpleGit {
   console.log("init sturdy", gitRepoPath);
   const options: SimpleGitOptions = {
     baseDir: gitRepoPath,
