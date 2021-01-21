@@ -91,8 +91,8 @@ async function work(publicLogs: vscode.OutputChannel) {
     publicLogs.appendLine("Starting Sturdy for " + r.full_name);
   })
 
-  pushLoop(git, user, conf, repos);
-  conflictsLoop(repos, conf, git);
+  pushLoop(git, user, conf, repos, publicLogs);
+  conflictsLoop(repos, conf, git, publicLogs);
 }
 
 function displayLoginMessage() {
@@ -114,7 +114,8 @@ async function pushLoop(
   git: SimpleGit,
   user: User,
   conf: Configuration,
-  repos: FindReposResponse
+  repos: FindReposResponse,
+  publicLogs: vscode.OutputChannel
 ) {
   console.log("staring pushLoop")
 
@@ -139,13 +140,13 @@ async function pushLoop(
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       let workingTreeDiff = await getPatch(git);
-      handleConflicts(conf, repos, workingTreeDiff);
+      handleConflicts(conf, repos, workingTreeDiff, publicLogs);
     }
     await new Promise((resolve) => setTimeout(resolve, 2000));
   }
 }
 
-async function conflictsLoop(repos: FindReposResponse, conf: Configuration, git: SimpleGit) {
+async function conflictsLoop(repos: FindReposResponse, conf: Configuration, git: SimpleGit, publicLogs: vscode.OutputChannel) {
   let startedInWorkGeneration = workGeneration;
 
   for (; ;) {
@@ -156,7 +157,7 @@ async function conflictsLoop(repos: FindReposResponse, conf: Configuration, git:
 
     console.log("conflictsLoop")
     let workingTreeDiff = await getPatch(git);
-    handleConflicts(conf, repos, workingTreeDiff);
+    handleConflicts(conf, repos, workingTreeDiff, publicLogs);
     await new Promise((resolve) => setTimeout(resolve, 60000));
   }
 }
@@ -192,7 +193,7 @@ function equalConflicts(knownConflicts: ConflictsForRepo[], newConflicts: Confli
 
 let globalStateKnownConflicts: ConflictsForRepo[] = [];
 
-function handleConflicts(conf: Configuration, repos: FindReposResponse, workingTreeDiff: string) {
+function handleConflicts(conf: Configuration, repos: FindReposResponse, workingTreeDiff: string, publicLogs: vscode.OutputChannel) {
   fetchConflicts(conf, repos, workingTreeDiff).then((conflicts: ConflictsForRepo[]) => {
     console.log("fetched conflicts", conflicts)
 
@@ -206,6 +207,9 @@ function handleConflicts(conf: Configuration, repos: FindReposResponse, workingT
       conflicts.forEach(c => {
         c.conflicts.conflicts.forEach(cc => {
           msg += cc.commit + " conflicts with " + cc.counterpart + "\n"
+
+          publicLogs.appendLine(cc.commit + " conflicts with " + cc.counterpart + 
+            " - See more at " + "https://getsturdy.com/repo/" + c.repoOwner + "/" + c.repoName);
         })
       })
 
