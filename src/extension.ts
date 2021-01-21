@@ -22,7 +22,6 @@ export function activate(context: vscode.ExtensionContext) {
     console.log("onDidChangeConfiguration")
     let affected = event.affectsConfiguration("conf.sturdy");
     if (affected) {
-      vscode.window.showInformationMessage("Updated configuration for Sturdy, restarting...");
       work(publicLogs)
     }
   })
