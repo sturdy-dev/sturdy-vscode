@@ -2,32 +2,36 @@ import * as vscode from "vscode";
 import simpleGit, { SimpleGit, SimpleGitOptions } from "simple-git";
 import axios from "axios";
 
+// workGeneration is a simple way to keep track of downstream workers
+// if a worker notices that the workGeneration has increased, they need to stop themselves
+let workGeneration = 0;
+
 export function activate(context: vscode.ExtensionContext) {
-  console.log("activate", vscode.workspace.workspaceFolders);
-  let gitRepoPath: string = "";
-  if (
-    vscode.workspace.workspaceFolders &&
-    vscode.workspace.workspaceFolders.length > 0
-  ) {
-    gitRepoPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
-  }
-
-  if (gitRepoPath.length > 0) {
-    work(gitRepoPath);
-  } else {
-    console.log("no repo path found, skipping work");
-  }
-
   let setTokenCmd = vscode.commands.registerCommand("sturdy.auth", onSetToken);
-  let onStart = vscode.commands.registerCommand("onStartupFinished", () => {
-    if (gitRepoPath.length > 0) {
-      work(gitRepoPath);
-    } else {
-      console.log("no repo path found, skipping work");
-    }
-  });
+  let onWorkspaceChange = vscode.commands.registerCommand("onDidChangeWorkspaceFolders", work);
 
-  context.subscriptions.push(setTokenCmd, onStart);
+  // Create output channel
+  let publicLogs = vscode.window.createOutputChannel("Sturdy");
+
+  work(publicLogs)
+
+  context.subscriptions.push(setTokenCmd, onWorkspaceChange);
+
+  // Restart work if the configuration changes
+  vscode.workspace.onDidChangeConfiguration(event => {
+    console.log("onDidChangeConfiguration")
+    let affected = event.affectsConfiguration("conf.sturdy");
+    if (affected) {
+      vscode.window.showInformationMessage("Updated configuration for Sturdy, restarting...");
+      work(publicLogs)
+    }
+  })
+}
+
+interface Configuration {
+  token: string;
+  api: string;
+  remote: string;
 }
 
 async function onSetToken() {
@@ -35,17 +39,47 @@ async function onSetToken() {
   vscode.workspace
     .getConfiguration()
     .update("conf.sturdy.token", value, vscode.ConfigurationTarget.Global);
+  // No new work loop needs to be started here. The configuration-change event will take care of that! :-)
 }
 
-async function work(gitRepoPath: string) {
-  const conf: any = vscode.workspace.getConfiguration().get("conf.sturdy");
+async function work(publicLogs: vscode.OutputChannel) {
+  workGeneration++
+  console.log("work: generation:", workGeneration);
+
+  const conf: Configuration | undefined = vscode.workspace.getConfiguration().get("conf.sturdy");
+  if (!conf) {
+    console.log("failed to load configuration, aborting")
+    return;
+  }
+
+  if (!conf.token) {
+    displayLoginMessage()
+    return
+  }
+
+  // TODO: Support multiple repositories in the same VSCode Workspace?
+  let gitRepoPath: string = "";
+  if (
+    vscode.workspace.workspaceFolders &&
+    vscode.workspace.workspaceFolders.length > 0
+  ) {
+    gitRepoPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
+  }
+  if (!gitRepoPath) {
+    console.log("no repo path found, skipping work");
+    return
+  }
+
   let git = initGit(gitRepoPath);
 
   let user = await getUser(conf)
   if (!user) {
     console.log("could not load user, aborting")
+    displayLoginMessage()
     return;
   }
+
+  publicLogs.appendLine("Welcome to Sturdy, " + user.name + "!");
 
   let repos = await lookUp(git, conf);
   if (!repos) {
@@ -53,29 +87,48 @@ async function work(gitRepoPath: string) {
     return;
   }
 
-
+  repos.repos.forEach((r) => {
+    publicLogs.appendLine("Starting Sturdy for " + r.full_name);
+  })
 
   pushLoop(git, user, conf, repos);
   conflictsLoop(repos, conf, git);
 }
 
+function displayLoginMessage() {
+  vscode.window
+    .showInformationMessage("To complete the setup of Sturdy, go to getsturdy.com and connect Sturdy with GitHub", ...["Setup"])
+    .then((selection) => {
+      if (selection === "Setup") {
+        let uri = "https://getsturdy.com/";
+        vscode.env.openExternal(vscode.Uri.parse(uri));
+      }
+    });
+}
+
 async function getPatch(git: SimpleGit) {
-  let res = await git.diff()
-  console.log("getPatch", res);
-  return res;
+  return await git.diff();
 }
 
 async function pushLoop(
   git: SimpleGit,
   user: User,
-  conf: any,
+  conf: Configuration,
   repos: FindReposResponse
 ) {
   console.log("staring pushLoop")
 
   let remotes = remoteAddrs(conf, repos);
   let head = "";
+
+  let startedInWorkGeneration = workGeneration;
+
   for (; ;) {
+    if (workGeneration > startedInWorkGeneration) {
+      console.log("Stopping pushLoop in generation", workGeneration);
+      return;
+    }
+
     let currHead = await git.revparse("HEAD");
     console.log("pushLoop", head, currHead)
     if (head !== currHead) {
@@ -92,8 +145,15 @@ async function pushLoop(
   }
 }
 
-async function conflictsLoop(repos: FindReposResponse, conf: any, git: SimpleGit) {
+async function conflictsLoop(repos: FindReposResponse, conf: Configuration, git: SimpleGit) {
+  let startedInWorkGeneration = workGeneration;
+
   for (; ;) {
+    if (workGeneration > startedInWorkGeneration) {
+      console.log("Stopping conflictsLoop in generation", workGeneration);
+      return;
+    }
+
     console.log("conflictsLoop")
     let workingTreeDiff = await getPatch(git);
     handleConflicts(conf, repos, workingTreeDiff);
@@ -132,7 +192,7 @@ function equalConflicts(knownConflicts: ConflictsForRepo[], newConflicts: Confli
 
 let globalStateKnownConflicts: ConflictsForRepo[] = [];
 
-function handleConflicts(conf: any, repos: FindReposResponse, workingTreeDiff: string) {
+function handleConflicts(conf: Configuration, repos: FindReposResponse, workingTreeDiff: string) {
   fetchConflicts(conf, repos, workingTreeDiff).then((conflicts: ConflictsForRepo[]) => {
     console.log("fetched conflicts", conflicts)
 
@@ -163,7 +223,7 @@ function handleConflicts(conf: any, repos: FindReposResponse, workingTreeDiff: s
   })
 }
 
-function fetchConflicts(conf: any, repos: FindReposResponse, workingTreeDiff: string): Promise<ConflictsForRepo[]> {
+function fetchConflicts(conf: Configuration, repos: FindReposResponse, workingTreeDiff: string): Promise<ConflictsForRepo[]> {
   console.log("fetch conflicts")
 
   const requests: Promise<ConflictsForRepo>[] = repos.repos
@@ -187,7 +247,7 @@ function initGit(gitRepoPath: string): SimpleGit {
   return simpleGit(options);
 }
 
-function remoteAddrs(conf: any, repos: FindReposResponse): string[] {
+function remoteAddrs(conf: Configuration, repos: FindReposResponse): string[] {
   let uri = vscode.Uri.parse(conf.remote);
   let base =
     uri.scheme + "://git:" + conf.token + "@" + uri.authority + uri.path;
@@ -214,7 +274,7 @@ interface User {
   name: string;
 }
 
-const getUser = async (conf: any): Promise<User> => {
+const getUser = async (conf: Configuration): Promise<User> => {
   try {
     const response = await axios.get<User>(conf.api + "/v3/user", {
       headers: {
@@ -246,7 +306,7 @@ interface FindReposResponse {
   repos: Array<SturdyRepository>;
 }
 
-const lookUp = async (git: SimpleGit, conf: any): Promise<FindReposResponse> => {
+const lookUp = async (git: SimpleGit, conf: Configuration): Promise<FindReposResponse> => {
   console.log("lookup")
 
   let rsp = await git.remote(["-v"]);
@@ -308,7 +368,7 @@ interface ConflictsForRepo {
   repoName: string
 }
 
-const getConflictsForRepo = async (conf: any, owner: string, name: string, workingTreeDiff: string): Promise<ConflictsForRepo> => {
+const getConflictsForRepo = async (conf: Configuration, owner: string, name: string, workingTreeDiff: string): Promise<ConflictsForRepo> => {
   try {
     console.log("getConflictsForRepo", owner, name, workingTreeDiff);
 
