@@ -68,7 +68,7 @@ function displayLoginMessage() {
         .showInformationMessage("To complete the setup of Sturdy, go to getsturdy.com and connect Sturdy with GitHub", ...["Setup"])
         .then((selection) => {
             if (selection === "Setup") {
-                let uri = "https://getsturdy.com/";
+                let uri = "https://getsturdy.com/vscode";
                 vscode.env.openExternal(vscode.Uri.parse(uri));
             }
         });
