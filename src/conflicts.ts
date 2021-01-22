@@ -19,6 +19,7 @@ export interface Conflicts {
 }
 
 export interface AlertMessageResult {
+    anyConflicts: boolean;
     message: string;
     repoOwner: string;
     repoName: string;
@@ -30,14 +31,20 @@ export const AlertMessageForConflicts = (conflicts: ConflictsForRepo[]): AlertMe
     let repoName = first.repoName
 
     let msg = "You have conflicts:\n";
+    let anyConflicts = false;
+
 
     conflicts.forEach(c => {
-        c.conflicts.conflicts.forEach(cc => {
-            msg += composeMessageForConflict(cc)
-        })
+        if (c.conflicts && c.conflicts.conflicts) {
+            c.conflicts.conflicts.forEach(cc => {
+                msg += composeMessageForConflict(cc)
+                anyConflicts = true;
+            })
+        }
     })
 
     return {
+        anyConflicts: anyConflicts,
         message: msg,
         repoName: repoName,
         repoOwner: repoOwner,

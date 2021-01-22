@@ -168,17 +168,20 @@ function handleConflicts(conf: Configuration, repos: FindReposResponse, workingT
         if (!equalConflicts(globalStateKnownConflicts, conflicts) && conflicts.length > 0) {
 
             let res = AlertMessageForConflicts(conflicts)
-            publicLogs.appendLine(res.message)
-            publicLogs.appendLine("See more at " + "https://getsturdy.com/repo/" + res.repoOwner + "/" + res.repoName)
 
-            vscode.window
-                .showInformationMessage(res.message, ...["View"])
-                .then((selection) => {
-                    if (selection === "View") {
-                        let uri = "https://getsturdy.com/repo/" + res.repoOwner + "/" + res.repoName;
-                        vscode.env.openExternal(vscode.Uri.parse(uri));
-                    }
-                });
+            if (res.anyConflicts) {
+                publicLogs.appendLine(res.message)
+                publicLogs.appendLine("See more at " + "https://getsturdy.com/repo/" + res.repoOwner + "/" + res.repoName)
+
+                vscode.window
+                    .showInformationMessage(res.message, ...["View"])
+                    .then((selection) => {
+                        if (selection === "View") {
+                            let uri = "https://getsturdy.com/repo/" + res.repoOwner + "/" + res.repoName;
+                            vscode.env.openExternal(vscode.Uri.parse(uri));
+                        }
+                    });
+            }
         }
 
         globalStateKnownConflicts = conflicts;
