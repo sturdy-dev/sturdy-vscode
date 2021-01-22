@@ -4,12 +4,13 @@ import axios from "axios";
 import { Configuration } from './configuration';
 import { LookupConnectedSturdyRepositories, FindReposResponse } from './lookup_repos'
 import { User, GetUser } from './user'
+import {AlertMessageForConflicts, Conflict, Conflicts, ConflictsForRepo,} from './conflicts'
 
 // workGeneration is a simple way to keep track of downstream workers
 // if a worker notices that the workGeneration has increased, they need to stop themselves
 let workGeneration = 0;
 
-export async function Work(publicLogs: vscode.OutputChannel) {
+export async function Work(publicLogs: vscode .OutputChannel) {
     workGeneration++
     console.log("work: generation:", workGeneration);
 
@@ -165,25 +166,16 @@ function handleConflicts(conf: Configuration, repos: FindReposResponse, workingT
         console.log("fetched conflicts", conflicts)
 
         if (!equalConflicts(globalStateKnownConflicts, conflicts) && conflicts.length > 0) {
-            let first = conflicts[0]
-            let repoOwner = first.repoOwner
-            let repoName = first.repoName
 
-            let msg = "You have conflicts:\n";
-
-            conflicts.forEach(c => {
-                c.conflicts.conflicts.forEach(cc => {
-                    msg += composeMessageForConflict(cc)
-                    publicLogs.appendLine(cc.commit + " conflicts with " + cc.counterpart +
-                        " - See more at " + "https://getsturdy.com/repo/" + c.repoOwner + "/" + c.repoName);
-                })
-            })
+            let res = AlertMessageForConflicts(conflicts)
+            publicLogs.appendLine(res.message)
+            publicLogs.appendLine("See more at " + "https://getsturdy.com/repo/" + res.repoOwner + "/" + res.repoName)
 
             vscode.window
-                .showInformationMessage(msg, ...["View"])
+                .showInformationMessage(res.message, ...["View"])
                 .then((selection) => {
                     if (selection === "View") {
-                        let uri = "https://getsturdy.com/repo/" + repoOwner + "/" + repoName;
+                        let uri = "https://getsturdy.com/repo/" + res.repoOwner + "/" + res.repoName;
                         vscode.env.openExternal(vscode.Uri.parse(uri));
                     }
                 });
@@ -191,20 +183,6 @@ function handleConflicts(conf: Configuration, repos: FindReposResponse, workingT
 
         globalStateKnownConflicts = conflicts;
     })
-}
-
-function composeMessageForConflict(cc: Conflict): string {
-    if (cc.is_conflicting_working_directory) {
-        return "your uncommited changes to " + cc.conflicting_files.join(", ") + " are conflicting with " + cc.counterpart;
-    }
-    return "the changes to " + cc.conflicting_files.join(", ") +
-        " in " + cc.commit.substr(0, 8) +
-        " [\"" + commitMessageShort(cc) + "\"] are conflicting with " +
-        cc.counterpart + "\n"
-}
-
-function commitMessageShort(cc: Conflict): string {
-    return cc.commit_message.split("\n")[0].substr(0, 72)
 }
 
 function fetchConflicts(conf: Configuration, repos: FindReposResponse, workingTreeDiff: string): Promise<ConflictsForRepo[]> {
@@ -239,27 +217,6 @@ function push(git: SimpleGit, remote: string, userID: string) {
         console.log("pushing", currentBranch, userID)
         git.push(["--force", remote, currentBranch + ":" + userID]);
     });
-}
-
-
-interface Conflict {
-    commit: string;
-    commit_message: string;
-    conflicting_files: Array<string>;
-
-    is_conflicting_working_directory: boolean;
-
-    counterpart: string;
-}
-
-interface Conflicts {
-    conflicts: Array<Conflict>;
-}
-
-interface ConflictsForRepo {
-    conflicts: Conflicts
-    repoOwner: string
-    repoName: string
 }
 
 const getConflictsForRepo = async (conf: Configuration, owner: string, name: string, workingTreeDiff: string): Promise<ConflictsForRepo> => {
