@@ -2,13 +2,16 @@
 
 Sturdy is a code collaboration tool that makes working together simpler. Get notified in **real-time** about potential merge conflicts with other developers.
 
-It works by first connecting with a GitHub repo. Then Sturdy proactively searches for merge issues between your local work and the (local) work of others. Because all the heavy work is done in the cloud, the extension does not slow down VSCode.
+It works by first connecting with a GitHub repo. Then Sturdy proactively searches for merge issues between your local work and others. your local work and the (local) work of others. Because all the heavy work is done in the cloud, the extension does not slow down VSCode.
 
-- Shows you conflicts with the default remote branch:
-  ![Conflict notification window](https://getsturdy.com/img/head-conflicts-ss.png)
+**Sturdy notifies you when you have a conflict with the default remote branch**
 
-- Shows you conflicts event of your uncommitted changes:
-  ![Conflict notification uncommitted](https://getsturdy.com/img/working-dir-conflicts-ss.png)
+
+<div align="center"><img title="Confliction Notification" src="https://getsturdy.com/img/alert-commited-changes.png" width="500"></div>
+
+**Even if you haven't commited the changes yet**
+
+<div align="center"><img title="Confliction Notification" src="https://getsturdy.com/img/alert-uncommited-changes.png" width="500"></div>
 
 ## Features
 
