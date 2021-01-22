@@ -173,8 +173,7 @@ function handleConflicts(conf: Configuration, repos: FindReposResponse, workingT
 
             conflicts.forEach(c => {
                 c.conflicts.conflicts.forEach(cc => {
-                    msg += cc.commit + " conflicts with " + cc.counterpart + "\n"
-
+                    msg += composeMessageForConflict(cc)
                     publicLogs.appendLine(cc.commit + " conflicts with " + cc.counterpart +
                         " - See more at " + "https://getsturdy.com/repo/" + c.repoOwner + "/" + c.repoName);
                 })
@@ -192,6 +191,20 @@ function handleConflicts(conf: Configuration, repos: FindReposResponse, workingT
 
         globalStateKnownConflicts = conflicts;
     })
+}
+
+function composeMessageForConflict(cc: Conflict): string {
+    if (cc.is_conflicting_working_directory) {
+        return "your uncommited changes to " + cc.conflicting_files.join(", ") + " are conflicting with " + cc.counterpart;
+    }
+    return "the changes to " + cc.conflicting_files.join(", ") +
+        " in " + cc.commit.substr(0, 8) +
+        " [\"" + commitMessageShort(cc) + "\"] are conflicting with " +
+        cc.counterpart + "\n"
+}
+
+function commitMessageShort(cc: Conflict): string {
+    return cc.commit_message.split("\n")[0].substr(0, 72)
 }
 
 function fetchConflicts(conf: Configuration, repos: FindReposResponse, workingTreeDiff: string): Promise<ConflictsForRepo[]> {
@@ -231,6 +244,11 @@ function push(git: SimpleGit, remote: string, userID: string) {
 
 interface Conflict {
     commit: string;
+    commit_message: string;
+    conflicting_files: Array<string>;
+
+    is_conflicting_working_directory: boolean;
+
     counterpart: string;
 }
 
