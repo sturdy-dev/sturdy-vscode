@@ -49,10 +49,15 @@ export async function Work(publicLogs: vscode .OutputChannel) {
 
     publicLogs.appendLine("Welcome to Sturdy, " + user.name + "!");
 
-    let repos = await LookupConnectedSturdyRepositories(git, conf);
-    if (!repos) {
-        console.log("could not lookup repos, aborting")
-        return;
+    let repos : FindReposResponse;
+    for (;;) {
+        repos = await LookupConnectedSturdyRepositories(git, conf);
+        if (!repos || !repos.repos) {
+            console.log("could not find any repos, waiting 30s before trying again")
+            await new Promise((resolve) => setTimeout(resolve, 30000));
+            continue;
+        }
+        break;
     }
 
     repos.repos.forEach((r) => {
