@@ -49,7 +49,7 @@ export async function Work(publicLogs: vscode .OutputChannel) {
 
     publicLogs.appendLine("Welcome to Sturdy, " + user.name + "!");
 
-    let repos : FindReposResponse;
+    let repos : FindReposResponse | undefined;
     for (;;) {
         repos = await LookupConnectedSturdyRepositories(git, conf);
         if (!repos || !repos.repos) {
@@ -196,14 +196,14 @@ function handleConflicts(conf: Configuration, repos: FindReposResponse, workingT
 function fetchConflicts(conf: Configuration, repos: FindReposResponse, workingTreeDiff: string): Promise<ConflictsForRepo[]> {
     console.log("fetch conflicts")
 
-    const requests: Promise<ConflictsForRepo>[] = repos.repos
+    const requests: Promise<ConflictsForRepo | undefined>[] = repos.repos
         .filter((r) => r.enabled)
         .map((r) => {
             return getConflictsForRepo(conf, r.owner, r.name, workingTreeDiff);
         })
 
-    return Promise.all<ConflictsForRepo>(requests).then(responses => {
-        return responses.filter(r => r.conflicts)
+    return Promise.all<ConflictsForRepo | undefined>(requests).then(responses => {
+        return responses.filter((r): r is ConflictsForRepo => r !== null).filter(r => r.conflicts);
     })
 }
 
@@ -227,7 +227,7 @@ function push(git: SimpleGit, remote: string, userID: string) {
     });
 }
 
-const getConflictsForRepo = async (conf: Configuration, owner: string, name: string, workingTreeDiff: string): Promise<ConflictsForRepo> => {
+const getConflictsForRepo = async (conf: Configuration, owner: string, name: string, workingTreeDiff: string): Promise<ConflictsForRepo | undefined> => {
     try {
         console.log("getConflictsForRepo", owner, name, workingTreeDiff);
 
@@ -246,12 +246,8 @@ const getConflictsForRepo = async (conf: Configuration, owner: string, name: str
             repoName: name,
         };
     } catch (err) {
-        if (err && err.response) {
-            // const axiosError = err as AxiosError<ServerError>
-            // return axiosError.response.data;
-            return err;
-        }
-        throw err;
+        console.log("failed to getConflictsForRepo", err)
+        return undefined;
     }
 };
 

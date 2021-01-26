@@ -14,7 +14,7 @@ export interface FindReposResponse {
     repos: Array<SturdyRepository>;
 }
 
-export const LookupConnectedSturdyRepositories = async (git: SimpleGit, conf: Configuration): Promise<FindReposResponse> => {
+export const LookupConnectedSturdyRepositories = async (git: SimpleGit, conf: Configuration): Promise<FindReposResponse | undefined> => {
     console.log("lookup")
 
     let rsp = await git.remote(["-v"]);
@@ -49,12 +49,8 @@ export const LookupConnectedSturdyRepositories = async (git: SimpleGit, conf: Co
             const res = response.data;
             return res;
         } catch (err) {
-            if (err && err.response) {
-                // const axiosError = err as AxiosError<ServerError>
-                // return axiosError.response.data;
-                return err;
-            }
-            throw err;
+            console.log("failed to match repositories", err);
+            return undefined;
         }
     }
 
