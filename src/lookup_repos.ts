@@ -15,8 +15,9 @@ export interface FindReposResponse {
     repos: Array<SturdyRepository>;
 }
 
-export const LookupConnectedSturdyRepositories = async (git: SimpleGit, conf: Configuration): Promise<FindReposResponse | undefined> => {
+export const LookupConnectedSturdyRepositories = async (git: SimpleGit): Promise<FindReposResponse | undefined> => {
     console.log("lookup")
+    let conf: Configuration = vscode.workspace.getConfiguration().get("conf.sturdy");
 
     let rsp = await git.remote(["-v"]);
     if (typeof rsp === "string") {
@@ -51,6 +52,14 @@ export const LookupConnectedSturdyRepositories = async (git: SimpleGit, conf: Co
                     }
                 });
             const res = response.data;
+            if (!res.repos) {
+              let repos = out.map(x => x.remote_url.split(":")[1].replace(/\.[^/.]+$/, ""))
+				.filter(x => !conf.ignoredrepos.includes(x));
+			  // TODO: extra timer
+			  if (repos) {
+			  	promptSetupRepo(repos, conf);
+			  }
+            }
             return res;
         } catch (err) {
             console.log("failed to match repositories", err);
@@ -60,3 +69,23 @@ export const LookupConnectedSturdyRepositories = async (git: SimpleGit, conf: Co
 
     return Promise.reject(new Error('could not get remotes'));
 };
+
+function promptSetupRepo(repos: string[], conf: Configuration) {
+	// TODO: Allow the user to choose
+	let repo = repos[0]
+	if (!repo) return
+	vscode.window
+        .showInformationMessage("Wanna config " + repo + "?", ...["Yes", "Not now", "Never"])
+        .then((selection) => {
+            if (selection === "Yes") {
+                let uri = "https://getsturdy.com/setup?name="+encodeURIComponent(repo);
+                vscode.env.openExternal(vscode.Uri.parse(uri));
+			} else if (selection === "Never") {
+				 vscode.workspace
+				 	.getConfiguration()
+					.update("conf.sturdy.ignoredrepos", 
+						conf.ignoredrepos.concat(repos), 
+						vscode.ConfigurationTarget.Global);
+			}
+        });
+}

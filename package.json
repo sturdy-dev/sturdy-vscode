@@ -51,6 +51,12 @@
             "description": "Sturdy Remote",
             "default": "https://git.getsturdy.com",
             "scope": "window"
+          }, 
+          "conf.sturdy.ignoredrepos": {
+            "type": "array",
+            "description": "Repos you do not wish to integrate",
+            "default": [],
+            "scope": "application"
           }
         }
       }

@@ -51,7 +51,7 @@ export async function Work(publicLogs: vscode .OutputChannel) {
 
     let repos : FindReposResponse | undefined;
     for (;;) {
-        repos = await LookupConnectedSturdyRepositories(git, conf);
+        repos = await LookupConnectedSturdyRepositories(git);
         if (!repos || !repos.repos) {
             console.log("could not find any repos, waiting 30s before trying again")
             await new Promise((resolve) => setTimeout(resolve, 30000));
