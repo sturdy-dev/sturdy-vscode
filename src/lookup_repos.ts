@@ -1,6 +1,7 @@
 import { SimpleGit } from "simple-git";
 import axios from "axios";
 import { Configuration } from './configuration';
+import { headersWithAuth } from "./api";
 
 export interface SturdyRepository {
     id: string;
@@ -40,12 +41,7 @@ export const LookupConnectedSturdyRepositories = async (git: SimpleGit, conf: Co
         try {
             const response = await axios.post<FindReposResponse>(conf.api + "/v3/conflicts/lookup",
                 payload,
-                {
-                    headers: {
-                        Cookie: "auth=" + conf.token,
-                        "Content-Type": "application/json",
-                    }
-                });
+                { headers: headersWithAuth(conf.token) })
             const res = response.data;
             return res;
         } catch (err) {

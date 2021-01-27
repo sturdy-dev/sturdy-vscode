@@ -1,4 +1,5 @@
 import axios from "axios";
+import { headersWithAuth } from "./api";
 import { Configuration } from './configuration';
 
 export interface User {
@@ -12,12 +13,8 @@ export const GetUser = async (conf: Configuration): Promise<User | undefined> =>
 
 export const GetUserWithToken = async (conf: Configuration, token: string): Promise<User | undefined> => {
     try {
-        const response = await axios.get<User>(conf.api + "/v3/user", {
-            headers: {
-                Cookie: "auth=" + token,
-                "Content-Type": "application/json",
-            }
-        });
+        const response = await axios.get<User>(conf.api + "/v3/user",
+            { headers: headersWithAuth(token) })
         const user = response.data;
         return user;
     } catch (err) {
