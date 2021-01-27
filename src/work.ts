@@ -231,12 +231,15 @@ const getConflictsForRepo = async (conf: Configuration, owner: string, name: str
     try {
         console.log("getConflictsForRepo", owner, name, workingTreeDiff);
 
+        let versionInfo = "vscode:" + vscode.extensions.getExtension("Sturdy.sturdy")?.packageJSON.version;
+
         const response = await axios.post<Conflicts>(conf.api + "/v3/conflicts/check/" + owner + "/" + name,
             { working_tree_diff: workingTreeDiff },
             {
                 headers: {
                     Cookie: "auth=" + conf.token,
                     "Content-Type": "application/json",
+                    "Version-Info": versionInfo,
                 }
             });
         const d = response.data;

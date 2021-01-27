@@ -1,5 +1,6 @@
 import { SimpleGit } from "simple-git";
 import axios from "axios";
+import * as vscode from "vscode";
 import { Configuration } from './configuration';
 
 export interface SturdyRepository {
@@ -37,6 +38,8 @@ export const LookupConnectedSturdyRepositories = async (git: SimpleGit, conf: Co
 
         console.log("lookup", JSON.stringify(payload))
 
+        let versionInfo = "vscode:" + vscode.extensions.getExtension("Sturdy.sturdy")?.packageJSON.version;
+
         try {
             const response = await axios.post<FindReposResponse>(conf.api + "/v3/conflicts/lookup",
                 payload,
@@ -44,6 +47,7 @@ export const LookupConnectedSturdyRepositories = async (git: SimpleGit, conf: Co
                     headers: {
                         Cookie: "auth=" + conf.token,
                         "Content-Type": "application/json",
+                        "Version-Info": versionInfo,
                     }
                 });
             const res = response.data;
