@@ -5,6 +5,7 @@ import { Configuration } from './configuration';
 import { LookupConnectedSturdyRepositories, FindReposResponse } from './lookup_repos'
 import { User, GetUser } from './user'
 import {AlertMessageForConflicts, Conflict, Conflicts, ConflictsForRepo,} from './conflicts'
+import { headersWithAuth } from "./api";
 
 // workGeneration is a simple way to keep track of downstream workers
 // if a worker notices that the workGeneration has increased, they need to stop themselves
@@ -233,12 +234,7 @@ const getConflictsForRepo = async (conf: Configuration, owner: string, name: str
 
         const response = await axios.post<Conflicts>(conf.api + "/v3/conflicts/check/" + owner + "/" + name,
             { working_tree_diff: workingTreeDiff },
-            {
-                headers: {
-                    Cookie: "auth=" + conf.token,
-                    "Content-Type": "application/json",
-                }
-            });
+            { headers: headersWithAuth(conf.token) })
         const d = response.data;
         return {
             conflicts: d,
