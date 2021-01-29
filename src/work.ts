@@ -51,10 +51,18 @@ export async function Work(publicLogs: vscode .OutputChannel) {
     publicLogs.appendLine("Welcome to Sturdy, " + user.name + "!");
 
     let repos : FindReposResponse | undefined;
+    let didLogAboutNotInstalled = false;
+
     for (;;) {
         repos = await LookupConnectedSturdyRepositories(git, conf);
         if (!repos || !repos.repos) {
             console.log("could not find any repos, waiting 30s before trying again")
+            
+            if (!didLogAboutNotInstalled) {
+                publicLogs.appendLine("Sturdy is not installed for any of the repositories in this Workspace. Go to https://getsturdy.com to set it up.")
+                didLogAboutNotInstalled = true;
+            }
+
             await new Promise((resolve) => setTimeout(resolve, 30000));
             continue;
         }
