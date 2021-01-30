@@ -2,6 +2,9 @@ import * as vscode from "vscode";
 import { GetUserWithToken } from "./user";
 import { Work } from './work'
 import { Configuration } from './configuration';
+import simpleGit, { SimpleGit, SimpleGitOptions } from "simple-git";
+import { LookupConnectedSturdyRepositories } from "./lookup_repos";
+import * as api from "./api";
 
 export function activate(context: vscode.ExtensionContext) {
   let setTokenCmd = vscode.commands.registerCommand("sturdy.auth", onSetToken);
@@ -22,6 +25,37 @@ export function activate(context: vscode.ExtensionContext) {
       Work(publicLogs)
     }
   })
+
+  // Push work dir
+  vscode.workspace.onDidSaveTextDocument(async () => {
+      let git = initGit();
+      if (!git) return
+      let conf: Configuration | undefined = vscode.workspace.getConfiguration().get("conf.sturdy");
+      if (!conf) return
+      let repos = await LookupConnectedSturdyRepositories(git, conf);
+      if (!repos) return
+      let workingTreeDiff = await git.diff()
+      repos.repos.forEach((r) => api.postWorkDirForRepo(conf, r.owner, r.name, workingTreeDiff))
+  })
+}
+
+function initGit(): SimpleGit | undefined {
+    let gitRepoPath: string = "";
+    if (
+        vscode.workspace.workspaceFolders &&
+        vscode.workspace.workspaceFolders.length > 0
+    ) {
+        gitRepoPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
+    }
+    if (!gitRepoPath) {
+        return undefined
+    }
+    const options: SimpleGitOptions = {
+        baseDir: gitRepoPath,
+        binary: "git",
+        maxConcurrentProcesses: 6,
+    }
+    return simpleGit(options);
 }
 
 async function onSetToken() {

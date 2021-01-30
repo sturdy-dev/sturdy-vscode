@@ -1,4 +1,6 @@
+import axios from "axios";
 import * as vscode from "vscode";
+import { Configuration } from "./configuration";
 
 interface Headers {
     Cookie: string,
@@ -15,4 +17,15 @@ export function headersWithAuth(token: string): Headers {
         "x-client-name": "vscode",
         "x-client-version": version,
     };
+}
+
+export const postWorkDirForRepo = async (conf: Configuration | undefined, owner: string, name: string, workingTreeDiff: string) => {
+    if (!conf) return
+    try {
+        await axios.post(conf.api + "/v3/conflicts/workdir/" + owner + "/" + name,
+            { working_tree_diff: workingTreeDiff },
+            { headers: headersWithAuth(conf.token) })
+    } catch (err) {
+        console.log("failed to postWorkDirForRepo", err)
+    }
 }
