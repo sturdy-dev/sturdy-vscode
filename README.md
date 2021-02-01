@@ -2,7 +2,7 @@
 
 Sturdy is a code collaboration tool that makes working together simpler. Get notified in **real-time** about potential merge conflicts with other developers.
 
-It works by first connecting with a GitHub repo. Then Sturdy proactively searches for merge issues between your local work and others. your local work and the (local) work of others. Because all the heavy work is done in the cloud, the extension does not slow down VSCode.
+It works by first connecting with a GitHub repo. Then Sturdy proactively searches for merge issues between your local work and the (local) work of others. Because all the heavy work is done in the cloud, the extension does not slow down VSCode.
 
 **Sturdy notifies you when you have a conflict with the default remote branch**
 
