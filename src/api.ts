@@ -19,11 +19,14 @@ export function headersWithAuth(token: string): Headers {
     };
 }
 
-export const postWorkDirForRepo = async (conf: Configuration | undefined, owner: string, name: string, workingTreeDiff: string) => {
+export const postWorkDirForRepo = async (conf: Configuration | undefined, owner: string, name: string, workingTreeDiff: string, head: string) => {
     if (!conf) return
     try {
         await axios.post(conf.api + "/v3/conflicts/workdir/" + owner + "/" + name,
-            { working_tree_diff: workingTreeDiff },
+            { 
+                working_tree_diff: workingTreeDiff,
+                head: head,
+            },
             { headers: headersWithAuth(conf.token) })
     } catch (err) {
         console.log("failed to postWorkDirForRepo", err)

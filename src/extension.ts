@@ -35,7 +35,8 @@ export function activate(context: vscode.ExtensionContext) {
       let repos = await LookupConnectedSturdyRepositories(git, conf);
       if (!repos) return
       let workingTreeDiff = await git.diff()
-      repos.repos.forEach((r) => api.postWorkDirForRepo(conf, r.owner, r.name, workingTreeDiff))
+      let head = await git.revparse("HEAD");
+      repos.repos.forEach((r) => api.postWorkDirForRepo(conf, r.owner, r.name, workingTreeDiff, head))
   })
 }
 
