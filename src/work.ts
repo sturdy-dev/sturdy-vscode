@@ -75,6 +75,18 @@ export async function Work(publicLogs: vscode .OutputChannel) {
 
     pushLoop(git, user, conf, repos, publicLogs);
     conflictsLoop(repos, conf, git, publicLogs);
+    vscode.workspace.onDidSaveTextDocument(async () => {
+        if (!repos) return
+        pushWorkDirState(git, conf, repos)
+    })
+}
+
+async function pushWorkDirState(git: SimpleGit, conf: Configuration, repos: FindReposResponse) {
+    let workingTreeDiff = await git.diff()
+    let head = await git.revparse("HEAD");
+    repos.repos.forEach((r) => {
+        postWorkDirForRepo(conf, r.owner, r.name, workingTreeDiff, head)
+    })
 }
 
 function displayLoginMessage() {
@@ -228,6 +240,19 @@ function push(git: SimpleGit, remote: string, userID: string) {
         let currentBranch = br.current;
         git.push(["--force", remote, currentBranch + ":" + userID]);
     });
+}
+
+const postWorkDirForRepo = (conf: Configuration, owner: string, name: string, workingTreeDiff: string, head: string) => {
+    try {
+        axios.post(conf.api + "/v3/conflicts/workdir/" + owner + "/" + name,
+        { 
+            working_tree_diff: workingTreeDiff,
+            head: head,
+        },
+        { headers: headersWithAuth(conf.token) })
+    } catch (err) {
+        console.log("failed to postWorkDirForRepo", err)
+    }
 }
 
 const getConflictsForRepo = async (conf: Configuration, owner: string, name: string, workingTreeDiff: string): Promise<ConflictsForRepo | undefined> => {
