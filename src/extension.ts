@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { GetUserWithToken } from "./user";
 import { Work } from './work'
 import { Configuration } from './configuration';
+import { initGit } from "./git";
 
 export function activate(context: vscode.ExtensionContext) {
   let setTokenCmd = vscode.commands.registerCommand("sturdy.auth", onSetToken);
@@ -9,8 +10,9 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create output channel
   let publicLogs = vscode.window.createOutputChannel("Sturdy");
+  let git = initGit()
 
-  Work(publicLogs)
+  Work(publicLogs, git)
 
   context.subscriptions.push(setTokenCmd, onWorkspaceChange);
 
@@ -19,7 +21,7 @@ export function activate(context: vscode.ExtensionContext) {
     console.log("onDidChangeConfiguration")
     let affected = event.affectsConfiguration("conf.sturdy");
     if (affected) {
-      Work(publicLogs)
+      Work(publicLogs, git)
     }
   })
 }
