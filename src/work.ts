@@ -122,7 +122,7 @@ async function pushLoop(
             await new Promise((resolve) => setTimeout(resolve, 2000));
 
             let workingTreeDiff = await getPatch(git);
-            handleConflicts(conf, repos, workingTreeDiff, publicLogs);
+            await handleConflicts(conf, repos, workingTreeDiff, publicLogs);
         }
         await new Promise((resolve) => setTimeout(resolve, 2000));
     }
@@ -139,7 +139,7 @@ async function conflictsLoop(repos: FindReposResponse, conf: Configuration, git:
 
         console.log("conflictsLoop")
         let workingTreeDiff = await getPatch(git);
-        handleConflicts(conf, repos, workingTreeDiff, publicLogs);
+        await handleConflicts(conf, repos, workingTreeDiff, publicLogs);
         await new Promise((resolve) => setTimeout(resolve, 60000));
     }
 }
@@ -175,12 +175,9 @@ function equalConflicts(knownConflicts: ConflictsForRepo[], newConflicts: Confli
 
 let globalStateKnownConflicts: ConflictsForRepo[] = [];
 
-function handleConflicts(conf: Configuration, repos: FindReposResponse, workingTreeDiff: string, publicLogs: vscode.OutputChannel) {
-    fetchConflicts(conf, repos, workingTreeDiff).then((conflicts: ConflictsForRepo[]) => {
-        console.log("fetched conflicts", conflicts)
-
+async function handleConflicts(conf: Configuration, repos: FindReposResponse, workingTreeDiff: string, publicLogs: vscode.OutputChannel) {
+    await fetchConflicts(conf, repos, workingTreeDiff).then((conflicts: ConflictsForRepo[]) => {
         if (!equalConflicts(globalStateKnownConflicts, conflicts) && conflicts.length > 0) {
-
             let res = AlertMessageForConflicts(conflicts)
 
             if (res.anyConflicts) {
