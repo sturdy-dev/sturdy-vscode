@@ -151,8 +151,7 @@ async function pushLoop(
             head = currHead;
             await new Promise((resolve) => setTimeout(resolve, 2000));
 
-            let workingTreeDiff = await getPatch(git);
-            await handleConflicts(conf, repos, workingTreeDiff, publicLogs);
+            await handleConflicts(conf, repos, publicLogs);
         }
         await new Promise((resolve) => setTimeout(resolve, 2000));
     }
@@ -168,9 +167,8 @@ async function conflictsLoop(repos: FindReposResponse, conf: Configuration, git:
         }
 
         console.log("conflictsLoop")
-        let workingTreeDiff = await getPatch(git);
-        await handleConflicts(conf, repos, workingTreeDiff, publicLogs);
-        await new Promise((resolve) => setTimeout(resolve, 60000));
+        await handleConflicts(conf, repos, publicLogs);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
     }
 }
 
@@ -182,6 +180,19 @@ function isSetsEqual(a: Set<any>, b: Set<any>) {
     );
 }
 
+// conflictHashKey is a poor mans HashKey
+function conflictHashKey(c: Conflict): string {
+    var parts : string[] = [
+        c.id,
+        c.conflicting ? "t" : "f",
+        c.is_conflict_in_working_directory ? "t" : "f",
+    ];
+    if (c.conflicting_files) {
+        parts.push(...c.conflicting_files)
+    }
+    return parts.join(",")
+}
+
 function equalConflicts(knownConflicts: ConflictsForRepo[], newConflicts: ConflictsForRepo[]) {
     let knownSet = new Set();
     let newSet = new Set();
@@ -189,14 +200,14 @@ function equalConflicts(knownConflicts: ConflictsForRepo[], newConflicts: Confli
     knownConflicts.forEach((i) => {
         if (i.conflicts.conflicts) {
             i.conflicts.conflicts.forEach(c => {
-                knownSet.add(c.commit)
+                knownSet.add(conflictHashKey(c))
             })
         }
     });
     newConflicts.forEach((i) => {
         if (i.conflicts.conflicts) {
             i.conflicts.conflicts.forEach(c => {
-                newSet.add(c.commit)
+                newSet.add(conflictHashKey(c))
             })
         }
     });
@@ -205,8 +216,8 @@ function equalConflicts(knownConflicts: ConflictsForRepo[], newConflicts: Confli
 
 let globalStateKnownConflicts: ConflictsForRepo[] = [];
 
-async function handleConflicts(conf: Configuration, repos: FindReposResponse, workingTreeDiff: string, publicLogs: vscode.OutputChannel) {
-    await fetchConflicts(conf, repos, workingTreeDiff).then((conflicts: ConflictsForRepo[]) => {
+async function handleConflicts(conf: Configuration, repos: FindReposResponse, publicLogs: vscode.OutputChannel) {
+    await fetchConflicts(conf, repos).then((conflicts: ConflictsForRepo[]) => {
         if (!equalConflicts(globalStateKnownConflicts, conflicts) && conflicts.length > 0) {
             let res = AlertMessageForConflicts(conflicts)
 
@@ -229,11 +240,11 @@ async function handleConflicts(conf: Configuration, repos: FindReposResponse, wo
     })
 }
 
-function fetchConflicts(conf: Configuration, repos: FindReposResponse, workingTreeDiff: string): Promise<ConflictsForRepo[]> {
+function fetchConflicts(conf: Configuration, repos: FindReposResponse): Promise<ConflictsForRepo[]> {
     const requests: Promise<ConflictsForRepo | undefined>[] = repos.repos
         .filter((r) => r.enabled)
         .map((r) => {
-            return getConflictsForRepo(conf, r.owner, r.name, workingTreeDiff);
+            return getConflictsForRepo(conf, r.owner, r.name);
         })
 
     return Promise.all<ConflictsForRepo | undefined>(requests).then(responses => {
@@ -273,10 +284,9 @@ const postWorkDirForRepo = (conf: Configuration, owner: string, name: string, wo
     }
 }
 
-const getConflictsForRepo = async (conf: Configuration, owner: string, name: string, workingTreeDiff: string): Promise<ConflictsForRepo | undefined> => {
+const getConflictsForRepo = async (conf: Configuration, owner: string, name: string): Promise<ConflictsForRepo | undefined> => {
     try {
-        const response = await axios.post<Conflicts>(conf.api + "/v3/conflicts/check/" + owner + "/" + name,
-            { working_tree_diff: workingTreeDiff },
+        const response = await axios.get<Conflicts>(conf.api + "/v3/conflicts/get/" + owner + "/" + name,
             { headers: headersWithAuth(conf.token) })
         const d = response.data;
         return {

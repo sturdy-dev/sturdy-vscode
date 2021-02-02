@@ -1,11 +1,16 @@
 export interface Conflict {
-    commit: string;
+    id: string;
+    repository_id: string;
+    base: string;
+    onto: string;
+    onto_name: string;
+    conflicting: boolean;
+    is_conflict_in_working_directory: boolean;
+    conflicting_commit: string;
+    checked_at: string;
+    user_id: string;
     commit_message: string;
     conflicting_files: Array<string>;
-
-    is_conflicting_working_directory: boolean;
-
-    counterpart: string;
 }
 
 export interface ConflictsForRepo {
@@ -36,10 +41,12 @@ export const AlertMessageForConflicts = (conflicts: ConflictsForRepo[]): AlertMe
 
     conflicts.forEach(c => {
         if (c.conflicts && c.conflicts.conflicts) {
-            c.conflicts.conflicts.forEach(cc => {
-                msg += composeMessageForConflict(cc)
-                anyConflicts = true;
-            })
+            c.conflicts.conflicts
+                .filter(c => c.conflicting)
+                .forEach(cc => {
+                    msg += composeMessageForConflict(cc)
+                    anyConflicts = true;
+                })
         }
     })
 
@@ -52,14 +59,14 @@ export const AlertMessageForConflicts = (conflicts: ConflictsForRepo[]): AlertMe
 }
 
 function composeMessageForConflict(cc: Conflict): string {
-    if (cc.is_conflicting_working_directory) {
-        return "your uncommited changes to " + cc.conflicting_files.join(", ") + " are conflicting with " + cc.counterpart + ".\n";
+    if (cc.is_conflict_in_working_directory) {
+        return "your uncommited changes to " + cc.conflicting_files.join(", ") + " are conflicting with " + cc.onto_name + ".\n";
     }
-    
+
     return "the changes to " + cc.conflicting_files.join(", ") +
-        " in " + cc.commit.substr(0, 8) +
+        " in " + cc.conflicting_commit.substr(0, 8) +
         " [\"" + commitMessageShort(cc) + "\"] are conflicting with " +
-        cc.counterpart + ".\n"
+        cc.onto_name + ".\n"
 }
 
 function commitMessageShort(cc: Conflict): string {
