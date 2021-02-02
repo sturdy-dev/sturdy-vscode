@@ -203,8 +203,6 @@ function handleConflicts(conf: Configuration, repos: FindReposResponse, workingT
 }
 
 function fetchConflicts(conf: Configuration, repos: FindReposResponse, workingTreeDiff: string): Promise<ConflictsForRepo[]> {
-    console.log("fetch conflicts")
-
     const requests: Promise<ConflictsForRepo | undefined>[] = repos.repos
         .filter((r) => r.enabled)
         .map((r) => {
@@ -231,15 +229,12 @@ function remoteAddrs(conf: Configuration, repos: FindReposResponse): string[] {
 function push(git: SimpleGit, remote: string, userID: string) {
     git.branch().then((br: any) => {
         let currentBranch = br.current;
-        console.log("pushing", currentBranch, userID)
         git.push(["--force", remote, currentBranch + ":" + userID]);
     });
 }
 
 const getConflictsForRepo = async (conf: Configuration, owner: string, name: string, workingTreeDiff: string): Promise<ConflictsForRepo | undefined> => {
     try {
-        console.log("getConflictsForRepo", owner, name, workingTreeDiff);
-
         const response = await axios.post<Conflicts>(conf.api + "/v3/conflicts/check/" + owner + "/" + name,
             { working_tree_diff: workingTreeDiff },
             { headers: headersWithAuth(conf.token) })
