@@ -11,7 +11,7 @@ import { headersWithAuth } from "./api";
 // if a worker notices that the workGeneration has increased, they need to stop themselves
 let workGeneration = 0;
 
-export async function Work(publicLogs: vscode .OutputChannel) {
+export async function Work(publicLogs: vscode .OutputChannel, git: SimpleGit | undefined) {
     workGeneration++
     console.log("work: generation:", workGeneration);
 
@@ -26,20 +26,10 @@ export async function Work(publicLogs: vscode .OutputChannel) {
         return
     }
 
-    // TODO: Support multiple repositories in the same VSCode Workspace?
-    let gitRepoPath: string = "";
-    if (
-        vscode.workspace.workspaceFolders &&
-        vscode.workspace.workspaceFolders.length > 0
-    ) {
-        gitRepoPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
-    }
-    if (!gitRepoPath) {
+    if (!git) {
         console.log("no repo path found, skipping work");
         return
     }
-
-    let git = initGit(gitRepoPath);
 
     let user = await GetUser(conf)
     if (!user) {
@@ -246,13 +236,3 @@ const getConflictsForRepo = async (conf: Configuration, owner: string, name: str
         return undefined;
     }
 };
-
-function initGit(gitRepoPath: string): SimpleGit {
-    console.log("init sturdy", gitRepoPath);
-    const options: SimpleGitOptions = {
-        baseDir: gitRepoPath,
-        binary: "git",
-        maxConcurrentProcesses: 6,
-    };
-    return simpleGit(options);
-}

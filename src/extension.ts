@@ -2,9 +2,9 @@ import * as vscode from "vscode";
 import { GetUserWithToken } from "./user";
 import { Work } from './work'
 import { Configuration } from './configuration';
-import simpleGit, { SimpleGit, SimpleGitOptions } from "simple-git";
 import { LookupConnectedSturdyRepositories } from "./lookup_repos";
 import * as api from "./api";
+import { initGit } from "./git";
 
 export function activate(context: vscode.ExtensionContext) {
   let setTokenCmd = vscode.commands.registerCommand("sturdy.auth", onSetToken);
@@ -12,8 +12,9 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create output channel
   let publicLogs = vscode.window.createOutputChannel("Sturdy");
+  let git = initGit()
 
-  Work(publicLogs)
+  Work(publicLogs, git)
 
   context.subscriptions.push(setTokenCmd, onWorkspaceChange);
 
@@ -22,13 +23,12 @@ export function activate(context: vscode.ExtensionContext) {
     console.log("onDidChangeConfiguration")
     let affected = event.affectsConfiguration("conf.sturdy");
     if (affected) {
-      Work(publicLogs)
+      Work(publicLogs, git)
     }
   })
 
   // Push work dir
   vscode.workspace.onDidSaveTextDocument(async () => {
-      let git = initGit();
       if (!git) return
       let conf: Configuration | undefined = vscode.workspace.getConfiguration().get("conf.sturdy");
       if (!conf) return
@@ -38,25 +38,6 @@ export function activate(context: vscode.ExtensionContext) {
       let head = await git.revparse("HEAD");
       repos.repos.forEach((r) => api.postWorkDirForRepo(conf, r.owner, r.name, workingTreeDiff, head))
   })
-}
-
-function initGit(): SimpleGit | undefined {
-    let gitRepoPath: string = "";
-    if (
-        vscode.workspace.workspaceFolders &&
-        vscode.workspace.workspaceFolders.length > 0
-    ) {
-        gitRepoPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
-    }
-    if (!gitRepoPath) {
-        return undefined
-    }
-    const options: SimpleGitOptions = {
-        baseDir: gitRepoPath,
-        binary: "git",
-        maxConcurrentProcesses: 6,
-    }
-    return simpleGit(options);
 }
 
 async function onSetToken() {
