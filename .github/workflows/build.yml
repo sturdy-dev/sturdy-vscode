@@ -12,14 +12,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+      with:
+        annotations: false
 
     - name: Use Node.js ${{ env.NODE_VERSION }}
       uses: actions/setup-node@v1
       with:
         node-version: ${{ env.NODE_VERSION }}
+        annotations: false
 
     - name: npm install, compile, and test
       run: |
         npm install
         xvfb-run -a npm run compile --if-present
         xvfb-run -a npm run test --if-present
+
