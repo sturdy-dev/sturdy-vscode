@@ -10,8 +10,16 @@ import { headersWithAuth } from "./api";
 // workGeneration is a simple way to keep track of downstream workers
 // if a worker notices that the workGeneration has increased, they need to stop themselves
 let workGeneration = 0;
+let disposables: vscode.Disposable[]  = []
 
 export async function Work(publicLogs: vscode .OutputChannel) {
+    for (;;) {
+        let d = disposables.pop()
+        if (!d) {
+           break
+        }
+        d.dispose()
+    }
     workGeneration++
     console.log("work: generation:", workGeneration);
 
@@ -50,12 +58,12 @@ export async function Work(publicLogs: vscode .OutputChannel) {
 
     publicLogs.appendLine("Welcome to Sturdy, " + user.name + "!");
 
-    let repos : FindReposResponse | undefined;
+    let maybeRepos : FindReposResponse | undefined;
     let didLogAboutNotInstalled = false;
 
     for (;;) {
-        repos = await LookupConnectedSturdyRepositories(git, conf);
-        if (!repos || !repos.repos) {
+        maybeRepos = await LookupConnectedSturdyRepositories(git, conf);
+        if (!maybeRepos || !maybeRepos.repos) {
             console.log("could not find any repos, waiting 30s before trying again")
             
             if (!didLogAboutNotInstalled) {
@@ -69,16 +77,26 @@ export async function Work(publicLogs: vscode .OutputChannel) {
         break;
     }
 
+    let repos : FindReposResponse  = maybeRepos;
+
     repos.repos.forEach((r) => {
         publicLogs.appendLine("Starting Sturdy for " + r.full_name);
     })
 
     pushLoop(git, user, conf, repos, publicLogs);
     conflictsLoop(repos, conf, git, publicLogs);
-    vscode.workspace.onDidSaveTextDocument(async () => {
-        if (!repos) return
-        pushWorkDirState(git, conf, repos)
-    })
+
+    let timeout: NodeJS.Timeout | undefined
+    disposables.push(
+        vscode.workspace.onDidSaveTextDocument(async () => {
+            if (timeout) {
+                return
+            }
+            timeout = setTimeout(async () => {
+                await pushWorkDirState(git, conf, repos)
+                timeout = undefined
+            }, 200)
+    }))
 }
 
 async function pushWorkDirState(git: SimpleGit, conf: Configuration, repos: FindReposResponse) {
