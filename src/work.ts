@@ -248,7 +248,7 @@ function fetchConflicts(conf: Configuration, repos: FindReposResponse): Promise<
         })
 
     return Promise.all<ConflictsForRepo | undefined>(requests).then(responses => {
-        return responses.filter((r): r is ConflictsForRepo => r !== null).filter(r => r.conflicts);
+        return responses.filter((r : ConflictsForRepo | undefined): r is ConflictsForRepo => !!r).filter(r => r.conflicts)
     })
 }
 
