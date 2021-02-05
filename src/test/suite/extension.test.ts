@@ -22,6 +22,8 @@ suite('Extension Test Suite', () => {
                 base: "111111",
                 onto: "222222",
                 onto_name: "master",
+                onto_reference_type: "",
+                onto_reference_id: "",
                 conflicting: true,
                 is_conflict_in_working_directory: false,
                 conflicting_commit: "7f4ecbdceeb365f61384c30c4f13e05b8da0f50d",
@@ -38,6 +40,8 @@ suite('Extension Test Suite', () => {
                 base: "111111",
                 onto: "444444",
                 onto_name: "not-master",
+                onto_reference_type: "",
+                onto_reference_id: "",
                 conflicting: false,
                 is_conflict_in_working_directory: false,
                 conflicting_commit: "",
@@ -57,7 +61,7 @@ suite('Extension Test Suite', () => {
         }]);
 
         assert.strictEqual(res.anyConflicts, true)
-        assert.strictEqual(res.message, "You have conflicts:\nthe changes to a.txt, foo.txt in 7f4ecbdc [\"This is a commit message, actually.\"] are conflicting with master.\n");
+        assert.strictEqual(res.message, "Your changes in 7f4ecbdc [\"This is a commit message, actually.\"] are conflicting with master. ");
     });
 
     test('conflict messages working directory', async () => {
@@ -68,6 +72,26 @@ suite('Extension Test Suite', () => {
                 base: "111111",
                 onto: "222222",
                 onto_name: "master",
+                onto_reference_type: "",
+                onto_reference_id: "",
+                conflicting: true,
+                is_conflict_in_working_directory: true,
+                conflicting_commit: "",
+                checked_at: "2021-02-02",
+                user_id: "abc123",
+                commit_message: "",
+                conflicting_files: ["a.txt", "foo.txt"],
+             },
+
+             // Conflict with PR
+             {
+                id: "abc123",
+                repository_id: "abc123",
+                base: "111111",
+                onto: "222222",
+                onto_name: "github-pr-123",
+                onto_reference_type: "github-pr",
+                onto_reference_id: "123",
                 conflicting: true,
                 is_conflict_in_working_directory: true,
                 conflicting_commit: "",
@@ -84,6 +108,8 @@ suite('Extension Test Suite', () => {
                 base: "111111",
                 onto: "444444",
                 onto_name: "not-master",
+                onto_reference_type: "",
+                onto_reference_id: "",
                 conflicting: false,
                 is_conflict_in_working_directory: false,
                 conflicting_commit: "",
@@ -103,7 +129,7 @@ suite('Extension Test Suite', () => {
         }]);
 
         assert.strictEqual(res.anyConflicts, true)
-        assert.strictEqual(res.message, "You have conflicts:\nyour uncommited changes to a.txt, foo.txt are conflicting with master.\n");
+        assert.strictEqual(res.message, "Your uncommitted changes are conflicting with master, #123. ");
     });
 
     test('conflict messages no conflicts', async () => {
@@ -114,6 +140,8 @@ suite('Extension Test Suite', () => {
                 base: "111111",
                 onto: "222222",
                 onto_name: "master",
+                onto_reference_type: "",
+                onto_reference_id: "",
                 conflicting: false,
                 is_conflict_in_working_directory: false,
                 conflicting_commit: "",

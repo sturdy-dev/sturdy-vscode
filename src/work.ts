@@ -286,7 +286,7 @@ const postWorkDirForRepo = (conf: Configuration, owner: string, name: string, wo
 
 const getConflictsForRepo = async (conf: Configuration, owner: string, name: string): Promise<ConflictsForRepo | undefined> => {
     try {
-        const response = await axios.get<Conflicts>(conf.api + "/v3/conflicts/get/" + owner + "/" + name,
+        const response = await axios.get<Conflicts>(conf.api + "/v3/conflicts/get/" + owner + "/" + name + "?include_prs=1",
             { headers: headersWithAuth(conf.token) })
         const d = response.data;
         return {
