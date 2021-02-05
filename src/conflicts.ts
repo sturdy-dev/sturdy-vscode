@@ -2,8 +2,12 @@ export interface Conflict {
     id: string;
     repository_id: string;
     base: string;
+
     onto: string;
     onto_name: string;
+    onto_reference_type: string;
+    onto_reference_id: string;
+
     conflicting: boolean;
     is_conflict_in_working_directory: boolean;
     conflicting_commit: string;
@@ -34,21 +38,15 @@ export const AlertMessageForConflicts = (conflicts: ConflictsForRepo[]): AlertMe
     let first = conflicts[0]
     let repoOwner = first.repoOwner
     let repoName = first.repoName
-
-    let msg = "You have conflicts:\n";
     let anyConflicts = false;
+    let groupedConflicts = conflictsByConflictingCommit(conflicts);
+    let msg = "";
 
-
-    conflicts.forEach(c => {
-        if (c.conflicts && c.conflicts.conflicts) {
-            c.conflicts.conflicts
-                .filter(c => c.conflicting)
-                .forEach(cc => {
-                    msg += composeMessageForConflict(cc)
-                    anyConflicts = true;
-                })
-        }
-    })
+    for (let k in groupedConflicts) {
+        console.log(k);
+        msg += composeMessageForConflicts(groupedConflicts[k]) + ". "
+        anyConflicts = true;
+    }
 
     return {
         anyConflicts: anyConflicts,
@@ -58,17 +56,53 @@ export const AlertMessageForConflicts = (conflicts: ConflictsForRepo[]): AlertMe
     }
 }
 
-function composeMessageForConflict(cc: Conflict): string {
-    if (cc.is_conflict_in_working_directory) {
-        return "your uncommited changes to " + cc.conflicting_files.join(", ") + " are conflicting with " + cc.onto_name + ".\n";
+function composeMessageForConflicts(conflicts: Conflict[]): string {
+    let msg = "";
+
+    if (conflicts[0].is_conflict_in_working_directory) {
+        msg += "Your uncommitted changes"
+    } else {
+        msg += "Your changes in " + conflicts[0].conflicting_commit.substr(0, 8) + " [\"" + commitMessageShort(conflicts[0]) + "\"]"
     }
 
-    return "the changes to " + cc.conflicting_files.join(", ") +
-        " in " + cc.conflicting_commit.substr(0, 8) +
-        " [\"" + commitMessageShort(cc) + "\"] are conflicting with " +
-        cc.onto_name + ".\n"
+    msg += " are conflicting with ";
+
+    for (let i = 0; i < conflicts.length; i++) {
+        let c = conflicts[i];
+
+        if (c.onto_reference_type == "github-pr") {
+            msg += "#" + c.onto_reference_id
+        } else {
+            msg += c.onto_name
+        }
+
+        if (i < conflicts.length - 1) {
+            msg += ", "
+        }
+    }
+
+    return msg;
 }
 
 function commitMessageShort(cc: Conflict): string {
     return cc.commit_message.split("\n")[0].substr(0, 72)
+}
+
+function conflictsByConflictingCommit(conflictsForRepo: ConflictsForRepo[]): Record<string, Conflict[]> {
+    let by: Record<string, Conflict[]> = {};
+    for (let i = 0; i < conflictsForRepo.length; i++) {
+        let conflicts = conflictsForRepo[i].conflicts;
+        for (let j = 0; j < conflicts.conflicts.length; j++) {
+            let c = conflicts.conflicts[j];
+            if (!c.conflicting) {
+                continue;
+            }
+            let key = c.is_conflict_in_working_directory ? "wd" : c.conflicting_commit;
+            if (!by[key]) {
+                by[key] = []
+            }
+            by[key].push(c)
+        }
+    }
+    return by;
 }
