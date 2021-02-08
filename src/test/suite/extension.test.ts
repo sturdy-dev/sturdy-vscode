@@ -4,7 +4,7 @@ import * as assert from 'assert';
 // as well as import your extension to test it
 import * as vscode from 'vscode';
 
-import { AlertMessageForConflicts, Conflict } from '../../conflicts';
+import { AlertMessageForConflicts, Conflict, StatusBarMessageForConflicts } from '../../conflicts';
 
 suite('Extension Test Suite', () => {
     vscode.window.showInformationMessage('Start all tests.');
@@ -52,16 +52,20 @@ suite('Extension Test Suite', () => {
              }
         ];
 
-        let res = AlertMessageForConflicts([{
+        let c = [{
             repoOwner: "sturdy-dev",
             repoName: "sturdy-vscode",
             conflicts: {
                 conflicts: conflicts,
             }
-        }]);
+        }];
 
-        assert.strictEqual(res.anyConflicts, true)
-        assert.strictEqual(res.message, "Your changes in 7f4ecbdc [\"This is a commit message, actually.\"] are conflicting with master. ");
+        let alert = AlertMessageForConflicts(c)
+        assert.strictEqual(alert.anyConflicts, true)
+        assert.strictEqual(alert.message, "Your changes in 7f4ecbdc [\"This is a commit message, actually.\"] are conflicting with master. ");
+
+        let statusBar = StatusBarMessageForConflicts(c)
+        assert.strictEqual(statusBar.msg, "$(error) master")
     });
 
     test('conflict messages working directory', async () => {
@@ -120,16 +124,20 @@ suite('Extension Test Suite', () => {
              }
         ];
 
-        let res = AlertMessageForConflicts([{
+        let c = [{
             repoOwner: "sturdy-dev",
             repoName: "sturdy-vscode",
             conflicts: {
                 conflicts: conflicts,
             }
-        }]);
+        }];
 
-        assert.strictEqual(res.anyConflicts, true)
-        assert.strictEqual(res.message, "Your uncommitted changes are conflicting with master, #123. ");
+        let alert = AlertMessageForConflicts(c)
+        assert.strictEqual(alert.anyConflicts, true)
+        assert.strictEqual(alert.message, "Your uncommitted changes are conflicting with master, #123. ");
+
+        let statusBar = StatusBarMessageForConflicts(c)
+        assert.strictEqual(statusBar.msg, "$(error) master and $(warning) 1 PR")
     });
 
     test('conflict messages no conflicts', async () => {
@@ -152,14 +160,18 @@ suite('Extension Test Suite', () => {
              }
         ];
 
-        let res = AlertMessageForConflicts([{
+        let c = [{
             repoOwner: "sturdy-dev",
             repoName: "sturdy-vscode",
             conflicts: {
                 conflicts: conflicts,
             }
-        }]);
+        }];
 
-        assert.strictEqual(res.anyConflicts, false)
+        let alert = AlertMessageForConflicts(c)
+        assert.strictEqual(alert.anyConflicts, false)
+
+        let statusBar = StatusBarMessageForConflicts(c)
+        assert.strictEqual(statusBar.msg, "$(check) No conflicts")
     });
 });

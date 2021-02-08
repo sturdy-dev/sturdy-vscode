@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { GetUserWithToken } from "./user";
 import { Work } from './work'
 import { Configuration } from './configuration';
+import { initStatusBar } from "./status_bar";
 
 export function activate(context: vscode.ExtensionContext) {
   let setTokenCmd = vscode.commands.registerCommand("sturdy.auth", onSetToken);
@@ -9,6 +10,9 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create output channel
   let publicLogs = vscode.window.createOutputChannel("Sturdy");
+
+  // The status bar is a global object that manges itself.
+  initStatusBar(context);
 
   Work(publicLogs)
 
