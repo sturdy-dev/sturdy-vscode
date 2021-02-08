@@ -26,8 +26,7 @@
     "collaboration"
   ],
   "activationEvents": [
-    "onStartupFinished",
-    "onCommand:sturdy.helloWorld"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {
