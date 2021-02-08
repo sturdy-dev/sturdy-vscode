@@ -1,3 +1,6 @@
+import { StatusBarMessage } from "./status_bar";
+import { ThemeColor } from "vscode";
+
 export interface Conflict {
     id: string;
     repository_id: string;
@@ -43,7 +46,6 @@ export const AlertMessageForConflicts = (conflicts: ConflictsForRepo[]): AlertMe
     let msg = "";
 
     for (let k in groupedConflicts) {
-        console.log(k);
         msg += composeMessageForConflicts(groupedConflicts[k]) + ". "
         anyConflicts = true;
     }
@@ -105,4 +107,59 @@ function conflictsByConflictingCommit(conflictsForRepo: ConflictsForRepo[]): Rec
         }
     }
     return by;
+}
+
+export const StatusBarMessageForConflicts = (conflicts: ConflictsForRepo[]): StatusBarMessage => {
+    let first = conflicts[0]
+    let repoOwner = first.repoOwner
+    let repoName = first.repoName
+
+    let defaultBranchName = "";
+    let conflicsWithDefaultBranch = false;
+    let conflictsWithPRsCount = 0;
+
+    conflicts.forEach((c) => {
+        if (!c.conflicts || ! c.conflicts.conflicts) {
+            return;
+        }
+        c.conflicts.conflicts.forEach(cc => {
+            if (!cc.conflicting) {
+                return
+            }
+            if (cc.onto_reference_type == "github-pr") {
+                conflictsWithPRsCount++
+            } else {
+                defaultBranchName = cc.onto_name;
+                conflicsWithDefaultBranch = true;
+            }
+        })
+    })
+
+    let prPlural = (conflictsWithPRsCount > 1) ? 's': '';
+
+    if (conflicsWithDefaultBranch && conflictsWithPRsCount > 0) {
+       return {
+           msg: `\$(error) ${defaultBranchName} and \$(warning) ${conflictsWithPRsCount} PR${prPlural}`,
+           backgroundColor: new ThemeColor('statusBarItem.errorBackground'),
+           repoOwner: repoOwner, repoName: repoName,
+       }
+    } else if (conflicsWithDefaultBranch) {
+        return {
+            msg: `\$(error) ${defaultBranchName}`,
+            backgroundColor: new ThemeColor('statusBarItem.errorBackground'),
+            repoOwner: repoOwner, repoName: repoName,
+        }
+    } else if (conflictsWithPRsCount > 0) {
+        return {
+            msg: `\$(warning) ${conflictsWithPRsCount} PR${prPlural}`,
+            backgroundColor: undefined,
+            repoOwner: repoOwner, repoName: repoName,
+        }
+    } else {
+        return {
+            msg: `\$(check) No conflicts`,
+            backgroundColor: undefined,
+            repoOwner: repoOwner, repoName: repoName,
+        }
+    }
 }

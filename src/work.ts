@@ -4,8 +4,9 @@ import axios from "axios";
 import { Configuration } from './configuration';
 import { LookupConnectedSturdyRepositories, FindReposResponse } from './lookup_repos'
 import { User, GetUser } from './user'
-import {AlertMessageForConflicts, Conflict, Conflicts, ConflictsForRepo,} from './conflicts'
+import { AlertMessageForConflicts, Conflict, Conflicts, ConflictsForRepo, StatusBarMessageForConflicts } from './conflicts'
 import { headersWithAuth } from "./api";
+import { setStatusBarText } from "./status_bar";
 
 // workGeneration is a simple way to keep track of downstream workers
 // if a worker notices that the workGeneration has increased, they need to stop themselves
@@ -218,6 +219,10 @@ let globalStateKnownConflicts: ConflictsForRepo[] = [];
 
 async function handleConflicts(conf: Configuration, repos: FindReposResponse, publicLogs: vscode.OutputChannel) {
     await fetchConflicts(conf, repos).then((conflicts: ConflictsForRepo[]) => {
+
+        // Update status bar
+        setStatusBarText(StatusBarMessageForConflicts(conflicts));
+
         if (!equalConflicts(globalStateKnownConflicts, conflicts) && conflicts.length > 0) {
             let res = AlertMessageForConflicts(conflicts)
 
