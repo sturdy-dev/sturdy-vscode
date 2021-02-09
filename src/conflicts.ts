@@ -94,6 +94,11 @@ function conflictsByConflictingCommit(conflictsForRepo: ConflictsForRepo[]): Rec
     let by: Record<string, Conflict[]> = {};
     for (let i = 0; i < conflictsForRepo.length; i++) {
         let conflicts = conflictsForRepo[i].conflicts;
+
+        if (!conflicts || !conflicts.conflicts) {
+            continue;
+        }
+
         for (let j = 0; j < conflicts.conflicts.length; j++) {
             let c = conflicts.conflicts[j];
             if (!c.conflicting) {
@@ -110,6 +115,14 @@ function conflictsByConflictingCommit(conflictsForRepo: ConflictsForRepo[]): Rec
 }
 
 export const StatusBarMessageForConflicts = (conflicts: ConflictsForRepo[]): StatusBarMessage => {
+    if (conflicts.length == 0) {
+        return {
+            msg: ``,
+            backgroundColor: undefined,
+            repoOwner: "", repoName: "",
+        }
+    }
+
     let first = conflicts[0]
     let repoOwner = first.repoOwner
     let repoName = first.repoName
