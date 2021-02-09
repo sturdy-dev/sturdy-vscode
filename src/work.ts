@@ -195,24 +195,27 @@ function conflictHashKey(c: Conflict): string {
 }
 
 function equalConflicts(knownConflicts: ConflictsForRepo[], newConflicts: ConflictsForRepo[]) {
-    let knownSet = new Set();
-    let newSet = new Set();
-
-    knownConflicts.forEach((i) => {
-        if (i.conflicts.conflicts) {
-            i.conflicts.conflicts.forEach(c => {
-                knownSet.add(conflictHashKey(c))
-            })
-        }
-    });
-    newConflicts.forEach((i) => {
-        if (i.conflicts.conflicts) {
-            i.conflicts.conflicts.forEach(c => {
-                newSet.add(conflictHashKey(c))
-            })
-        }
-    });
+    let knownSet = buildSet(knownConflicts);
+    let newSet = buildSet(newConflicts);
     return isSetsEqual(newSet, knownSet);
+}
+
+function buildSet(conflicts: ConflictsForRepo[]): Set<string> {
+    let res = new Set<string>();
+    conflicts.forEach((i) => {
+        if (i.conflicts.conflicts) {
+            i.conflicts.conflicts.forEach(c => {
+                // Don't track PRs (it's too volatile).
+                // PRs are tracekd in real-time in the Status Bar, but not in the notifications
+                if (c.onto_reference_type === "github-pr") {
+                    return;
+                }
+
+                res.add(conflictHashKey(c))
+            })
+        }
+    });
+    return res;
 }
 
 let globalStateKnownConflicts: ConflictsForRepo[] = [];
