@@ -50,12 +50,13 @@ export async function Work(publicLogs: vscode .OutputChannel) {
 
     let git = initGit(gitRepoPath);
 
-    let user = await GetUser(conf)
-    if (!user) {
+    let maybeUser = await GetUser(conf)
+    if (!maybeUser) {
         console.log("could not load user, aborting")
         displayLoginMessage()
         return;
     }
+    let user = maybeUser;
 
     publicLogs.appendLine("Welcome to Sturdy, " + user.name + "!");
 
@@ -84,20 +85,48 @@ export async function Work(publicLogs: vscode .OutputChannel) {
         publicLogs.appendLine("Starting Sturdy for " + r.full_name);
     })
 
-    pushLoop(git, user, conf, repos, publicLogs);
-    conflictsLoop(repos, conf, git, publicLogs);
+    // Changes is a message bus
+    // Downstream workers will send events to this bus, to let us know that we should push state to Sturdy
+    let changes = new vscode.EventEmitter<Change>();
 
     let timeout: NodeJS.Timeout | undefined
+
+    changes.event(async (e) => {
+        console.log("change from", e.from)
+
+        if (timeout) {
+            return
+        }
+
+        pushToSturdy(git, user, remotes);
+        await pushWorkDirState(git, conf, repos)
+
+        timeout = setTimeout(async () => {
+            pushToSturdy(git, user, remotes)
+            await pushWorkDirState(git, conf, repos)
+            timeout = undefined
+        }, 200)
+    })
+
+    let remotes = remoteAddrs(conf, repos);
+
+    gitHeadChangeLoop(git, changes);
+    conflictsLoop(repos, conf, git, publicLogs);
+
+    let onSave =  vscode.workspace.onDidSaveTextDocument(() => {
+        changes.fire({from: "save"})
+    });
+
+    // Mark disposable resources
+    // These will be disposed if Work is restarted
     disposables.push(
-        vscode.workspace.onDidSaveTextDocument(async () => {
-            if (timeout) {
-                return
-            }
-            timeout = setTimeout(async () => {
-                await pushWorkDirState(git, conf, repos)
-                timeout = undefined
-            }, 200)
-    }))
+       changes,
+       onSave,
+    )
+}
+
+interface Change {
+    from: string;
 }
 
 async function pushWorkDirState(git: SimpleGit, conf: Configuration, repos: FindReposResponse) {
@@ -119,22 +148,11 @@ function displayLoginMessage() {
         });
 }
 
-async function getPatch(git: SimpleGit) {
-    return await git.diff();
-}
-
-async function pushLoop(
+async function gitHeadChangeLoop(
     git: SimpleGit,
-    user: User,
-    conf: Configuration,
-    repos: FindReposResponse,
-    publicLogs: vscode.OutputChannel
+    changes: vscode.EventEmitter<Change>,
 ) {
-    console.log("staring pushLoop")
-
-    let remotes = remoteAddrs(conf, repos);
     let head = "";
-
     let startedInWorkGeneration = workGeneration;
 
     for (; ;) {
@@ -144,18 +162,23 @@ async function pushLoop(
         }
 
         let currHead = await git.revparse("HEAD");
-        console.log("pushLoop", head, currHead)
         if (head !== currHead) {
-            remotes.forEach((r: any) => {
-                push(git, r, user.id);
-            });
             head = currHead;
-            await new Promise((resolve) => setTimeout(resolve, 2000));
-
-            await handleConflicts(conf, repos, publicLogs);
+            changes.fire({"from": "git"})
         }
+
         await new Promise((resolve) => setTimeout(resolve, 2000));
     }
+}
+
+function pushToSturdy(
+    git: SimpleGit,
+    user: User,
+    remotes: string[],
+) {
+    remotes.forEach((r: any) => {
+        push(git, r, user.id);
+    });
 }
 
 async function conflictsLoop(repos: FindReposResponse, conf: Configuration, git: SimpleGit, publicLogs: vscode.OutputChannel) {
@@ -210,7 +233,7 @@ function buildSet(conflicts: ConflictsForRepo[]): Set<string> {
                 if (c.onto_reference_type === "github-pr") {
                     return;
                 }
-
+     
                 res.add(conflictHashKey(c))
             })
         }
