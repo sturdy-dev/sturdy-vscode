@@ -26,10 +26,8 @@ suite('Extension Test Suite', () => {
                 onto_reference_id: "",
                 conflicting: true,
                 is_conflict_in_working_directory: false,
-                conflicting_commit: "7f4ecbdceeb365f61384c30c4f13e05b8da0f50d",
                 checked_at: "2021-02-02",
                 user_id: "abc123",
-                commit_message: "This is a commit message, actually.\nAnd here it is on the next line.",
                 conflicting_files: ["a.txt", "foo.txt"],
              },
 
@@ -44,10 +42,8 @@ suite('Extension Test Suite', () => {
                 onto_reference_id: "",
                 conflicting: false,
                 is_conflict_in_working_directory: false,
-                conflicting_commit: "",
                 checked_at: "2021-02-02",
                 user_id: "abc123",
-                commit_message: "",
                 conflicting_files: [],
              }
         ];
@@ -62,7 +58,7 @@ suite('Extension Test Suite', () => {
 
         let alert = AlertMessageForConflicts(c)
         assert.strictEqual(alert.anyConflicts, true)
-        assert.strictEqual(alert.message, "Your changes in 7f4ecbdc [\"This is a commit message, actually.\"] are conflicting with master. ");
+        assert.strictEqual(alert.message, "Your commited changes are conflicting with master. ");
 
         let statusBar = StatusBarMessageForConflicts(c)
         assert.strictEqual(statusBar.msg, "$(error) master")
@@ -80,10 +76,8 @@ suite('Extension Test Suite', () => {
                 onto_reference_id: "",
                 conflicting: true,
                 is_conflict_in_working_directory: true,
-                conflicting_commit: "",
                 checked_at: "2021-02-02",
                 user_id: "abc123",
-                commit_message: "",
                 conflicting_files: ["a.txt", "foo.txt"],
              },
 
@@ -98,10 +92,8 @@ suite('Extension Test Suite', () => {
                 onto_reference_id: "123",
                 conflicting: true,
                 is_conflict_in_working_directory: true,
-                conflicting_commit: "",
                 checked_at: "2021-02-02",
                 user_id: "abc123",
-                commit_message: "",
                 conflicting_files: ["a.txt", "foo.txt"],
              },
 
@@ -116,10 +108,8 @@ suite('Extension Test Suite', () => {
                 onto_reference_id: "",
                 conflicting: false,
                 is_conflict_in_working_directory: false,
-                conflicting_commit: "",
                 checked_at: "2021-02-02",
                 user_id: "abc123",
-                commit_message: "",
                 conflicting_files: [],
              }
         ];
@@ -152,10 +142,8 @@ suite('Extension Test Suite', () => {
                 onto_reference_id: "",
                 conflicting: false,
                 is_conflict_in_working_directory: false,
-                conflicting_commit: "",
                 checked_at: "2021-02-02",
                 user_id: "abc123",
-                commit_message: "",
                 conflicting_files: [],
              }
         ];

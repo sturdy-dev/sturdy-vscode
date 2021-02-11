@@ -13,10 +13,8 @@ export interface Conflict {
 
     conflicting: boolean;
     is_conflict_in_working_directory: boolean;
-    conflicting_commit: string;
     checked_at: string;
     user_id: string;
-    commit_message: string;
     conflicting_files: Array<string>;
 }
 
@@ -64,7 +62,7 @@ function composeMessageForConflicts(conflicts: Conflict[]): string {
     if (conflicts[0].is_conflict_in_working_directory) {
         msg += "Your uncommitted changes"
     } else {
-        msg += "Your changes in " + conflicts[0].conflicting_commit.substr(0, 8) + " [\"" + commitMessageShort(conflicts[0]) + "\"]"
+        msg += "Your commited changes"
     }
 
     msg += " are conflicting with ";
@@ -86,10 +84,6 @@ function composeMessageForConflicts(conflicts: Conflict[]): string {
     return msg;
 }
 
-function commitMessageShort(cc: Conflict): string {
-    return cc.commit_message.split("\n")[0].substr(0, 72)
-}
-
 function conflictsByConflictingCommit(conflictsForRepo: ConflictsForRepo[]): Record<string, Conflict[]> {
     let by: Record<string, Conflict[]> = {};
     for (let i = 0; i < conflictsForRepo.length; i++) {
@@ -104,7 +98,7 @@ function conflictsByConflictingCommit(conflictsForRepo: ConflictsForRepo[]): Rec
             if (!c.conflicting) {
                 continue;
             }
-            let key = c.is_conflict_in_working_directory ? "wd" : c.conflicting_commit;
+            let key = c.is_conflict_in_working_directory ? "wd" : "commited";
             if (!by[key]) {
                 by[key] = []
             }
