@@ -29,7 +29,7 @@ export interface Conflicts {
 }
 
 export interface AlertMessageResult {
-    anyConflicts: boolean;
+    showMessage: boolean;
     message: string;
     repoOwner: string;
     repoName: string;
@@ -39,17 +39,25 @@ export const AlertMessageForConflicts = (conflicts: ConflictsForRepo[]): AlertMe
     let first = conflicts[0]
     let repoOwner = first.repoOwner
     let repoName = first.repoName
-    let anyConflicts = false;
     let groupedConflicts = conflictsByConflictingCommit(conflicts);
     let msg = "";
+    let showMessage = false;
 
     for (let k in groupedConflicts) {
-        msg += composeMessageForConflicts(groupedConflicts[k]) + ". "
-        anyConflicts = true;
+        let conflicts = groupedConflicts[k];
+
+        // If has conflict with a non-pr
+        conflicts.forEach(c => {
+            if (c.onto_reference_type != "github-pr") {
+                showMessage = true;
+            }
+        })
+        
+        msg += composeMessageForConflicts(conflicts) + ". "
     }
 
     return {
-        anyConflicts: anyConflicts,
+        showMessage: showMessage,
         message: msg,
         repoName: repoName,
         repoOwner: repoOwner,
