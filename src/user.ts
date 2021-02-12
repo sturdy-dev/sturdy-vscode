@@ -22,3 +22,21 @@ export const GetUserWithToken = async (conf: Configuration, token: string): Prom
         return undefined;
     }
 };
+
+export interface RenewToken {
+    token: string;
+    has_new: boolean;
+}
+
+export const RenewToken = async (conf: Configuration): Promise<RenewToken | undefined> => {
+    try {
+        const response = await axios.post<RenewToken>(conf.api + "/v3/auth/renew-token",
+            {},
+            { headers: headersWithAuth(conf.token) })        
+        const res = response.data;
+        return res;
+    } catch (err) {
+        console.log("failed to get new token:", err);
+        return undefined;
+    }
+};

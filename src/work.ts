@@ -3,7 +3,7 @@ import simpleGit, { SimpleGit, SimpleGitOptions } from "simple-git";
 import axios from "axios";
 import { Configuration } from './configuration';
 import { LookupConnectedSturdyRepositories, FindReposResponse } from './lookup_repos'
-import { User, GetUser } from './user'
+import { User, GetUser, RenewToken } from './user'
 import { AlertMessageForConflicts, Conflict, Conflicts, ConflictsForRepo, StatusBarMessageForConflicts } from './conflicts'
 import { headersWithAuth } from "./api";
 import { setStatusBarText } from "./status_bar";
@@ -59,6 +59,19 @@ export async function Work(publicLogs: vscode .OutputChannel) {
     let user = maybeUser;
 
     publicLogs.appendLine("Welcome to Sturdy, " + user.name + "!");
+
+    // Renew auth!
+    let newToken = await RenewToken(conf)
+    if (newToken) {
+        let mustToken = newToken;
+        console.log("has_new", mustToken.has_new)
+        if (mustToken.has_new && mustToken.token && mustToken.token.length > 10) {
+            // Update the settings (this will trigger a restart of the extension)
+            vscode.workspace
+                .getConfiguration()
+                .update("conf.sturdy.token", mustToken.token, vscode.ConfigurationTarget.Global)
+        }
+    }
 
     let maybeRepos : FindReposResponse | undefined;
     let didLogAboutNotInstalled = false;
