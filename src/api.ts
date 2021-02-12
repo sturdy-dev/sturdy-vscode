@@ -5,6 +5,7 @@ interface Headers {
     "Content-Type": string,
     "x-client-name": string,
     "x-client-version": string,
+    "x-vscode-version": string,
 }
 
 export function headersWithAuth(token: string): Headers {
@@ -14,5 +15,6 @@ export function headersWithAuth(token: string): Headers {
         "Content-Type": "application/json",
         "x-client-name": "vscode",
         "x-client-version": version,
+        "x-vscode-version": vscode.version,
     };
 }
