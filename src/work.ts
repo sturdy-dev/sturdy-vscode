@@ -252,7 +252,7 @@ async function handleConflicts(conf: Configuration, repos: FindReposResponse, pu
         if (!equalConflicts(globalStateKnownConflicts, conflicts) && conflicts.length > 0) {
             let res = AlertMessageForConflicts(conflicts)
 
-            if (res.anyConflicts) {
+            if (res.showMessage) {
                 publicLogs.appendLine(res.message)
                 publicLogs.appendLine("See more at " + "https://getsturdy.com/repo/" + res.repoOwner + "/" + res.repoName)
 
